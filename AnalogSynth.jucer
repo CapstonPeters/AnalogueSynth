@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<JUCERPROJECT id="AnalogSynth" name="AnalogSynth" projectType="audioplug" version="1.0.0" companyName="AnalogSynth" companyWebsite="" companyEmail="" bundleIdentifier="com.analogsynth.AnalogSynth" pluginFormats="buildVST3" pluginName="AnalogSynth" pluginManufacturer="AnalogSynth" pluginVersion="1.0.0" pluginIsSynth="1" pluginWantsMidiIn="1" pluginWantsMidiOut="1" pluginEditorRequiresKeys="1" pluginAUExportPrefix="AnalogSynth" aaxIdentifier="com.analogsynth.AnalogSynth" aaxCategory="AAX_ePlugInCategory_SWGenerators" jucerVersion="8.0.4" companyWebsite="" companyEmail="" headerPath="Source" sourcePath="Source" >
+  <MAINGROUP id="MainGroup">
+    <GROUP id="{00000000-0000-0000-0000-000000000001}" name="Source">
+      <FILE id="PluginProcessor.h" compile="0" resource="0" file="./Source/PluginProcessor.h" uuid="{11111111-1111-1111-1111-111111111111}"/>
+      <FILE id="PluginProcessor.cpp" compile="1" resource="0" file="./Source/PluginProcessor.cpp" uuid="{22222222-2222-2222-2222-222222222222}"/>
+      <FILE id="PluginEditor.h" compile="0" resource="0" file="./Source/PluginEditor.h" uuid="{33333333-3333-3333-3333-333333333333}"/>
+      <FILE id="PluginEditor.cpp" compile="1" resource="0" file="./Source/PluginEditor.cpp" uuid="{44444444-4444-4444-4444-444444444444}"/>
+    </GROUP>
+    <GROUP id="{55555555-5555-5555-5555-555555555555}" name="Resources">
+      <FILE id="AnalogSynth.uidesc" compile="0" resource="1" file="./Resources/AnalogSynth.uidesc" uuid="{55555555-5555-5555-5555-555555555555}"/>
+    </GROUP>
+  </MAINGROUP>
+  <EXPORTFORMATS>
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile" configuration="Release" runtimeLinking="static"/>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE name="juce_core" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_events" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_graphics" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_audio_basics" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_audio_devices" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_audio_formats" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_audio_processors" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_audio_utils" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_data_structures" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_dsp" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_gui_basics" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+    <MODULE name="juce_gui_extra" sourcePath="global" useGlobalPath="0" path="/home/jo/JUCE/modules"/>
+  </MODULES>
+  <JUCEOPTIONS
+    JUCE_STRICT_REFCOUNTEDPOINTER="1"
+    JUCE_CHECK_MEMORY_LEAKS="0"
+    JUCE_DONT_AUTOLINK_TO_WIN32_LIBRARIES="0"
+    JUCE_DONT_AUTOLINK_TO_WIN32_LIBRARIES_EXCEPT_OLE="0"
+    JUCE_LOG_ASSERTIONS="0"
+    JUCE_LOG_CURRENT_ASSERTION="0"
+    JUCE_CONFIGURATION="Release"
+    JUCE_DEBUG="0"
+    JUCE_ENABLE_DEBUG_HEAP="0"
+    JUCE_CATCH_UNHANDLED_EXCEPTIONS="1"
+    JUCE_STANDARD_HEADER="standardheader.h"
+    JUCE_USE_CURL="0"
+    JUCE_USE_FLAC="0"
+    JUCE_USE_LAME="0"
+    JUCE_USE_MP3AUDIOFORMAT="0"
+    JUCE_USE_OGGVORBIS="0"
+    JUCE_USE_WINDOWS_MEDIAFORMAT="0"
+    JUCE_WEB_BROWSER="0"
+    JUCE_WIN_PER_MONITOR_DPI="0"
+  />
+  <CONFIGURATIONS>
+    <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="AnalogSynth" plugInBinaryName="AnalogSynth">
+      <DEFINES>DEBUG=1</DEFINES>
+    </CONFIGURATION>
+    <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="AnalogSynth" plugInBinaryName="AnalogSynth">
+      <DEFINES>NDEBUG=1</DEFINES>
+    </CONFIGURATION>
+  </CONFIGURATIONS>
+  <EXPORTFORMATS>
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile" configuration="Release" runtimeLinking="static"/>
+  </EXPORTFORMATS>
+</JUCERPROJECT>

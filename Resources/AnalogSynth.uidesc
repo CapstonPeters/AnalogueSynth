@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<JUCERPROJECT id="AnalogSynth" projectType="audioplug" version="1.0.0" name="AnalogSynth" companyName="AnalogSynth" bundleIdentifier="com.analogsynth.AnalogSynth" pluginFormats="buildVST3" pluginName="AnalogSynth" pluginManufacturer="AnalogSynth" pluginVersion="1.0.0" pluginIsSynth="1" pluginWantsMidiIn="1" pluginWantsMidiOut="1" pluginEditorRequiresKeys="0" pluginAUExportPrefix="AnalogSynth" aaxIdentifier="com.analogsynth.AnalogSynth" aaxCategory="AAX_ePlugInCategory_SWGenerators" jucerVersion="8.0.0" companyWebsite="" companyEmail="" headerPath="Source" sourcePath="Source" >
+</JUCERPROJECT>
