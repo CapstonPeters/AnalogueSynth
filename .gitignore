@@ -1,0 +1,25 @@
+# Build directories
+build/
+build-*/
+cmake-build-*/
+juce-build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VST3 artifacts (generated)
+*_artefacts/
+
+# JUCE generated
+JuceLibraryCode/
+*.jucer.backup
+
+# Local config
+local-config.cmake
