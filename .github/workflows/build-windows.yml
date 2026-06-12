@@ -42,6 +42,12 @@ jobs:
           Get-ChildItem -Path "build" -Recurse -Directory | Where-Object {$_.Name -like "*artefact*" -or $_.Name -like "*VST3*"} | Select-Object FullName
           Write-Host "=== Searching for VST3 bundles ==="
           Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" | Select-Object FullName
+          Write-Host "=== Full Contents of any VST3 found ==="
+          $vst3Dirs = Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" -ErrorAction SilentlyContinue
+          foreach ($v in $vst3Dirs) {
+            Write-Host "VST3: $($v.FullName)"
+            Get-ChildItem -Path $v.FullName -Recurse | Select-Object FullName, Length
+          }
 
       - name: Find and package VST3
         id: package-vst3
@@ -61,10 +67,19 @@ jobs:
           # Verify it has the right structure
           $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
           if ($dll) {
-            Write-Host "Found plugin DLL: $($dll.FullName)"
+            Write-Host "Found plugin DLL: $($dll.FullName) (size: $($dll.Length) bytes)"
           } else {
             Write-Warning "No DLL found in x86_64-win, checking all Contents..."
-            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName
+            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName, Length
+          }
+          
+          # Verify plugin.xml exists
+          $pluginXml = Get-ChildItem -Path "$vst3Dir\Contents" -Filter "plugin.xml" -ErrorAction SilentlyContinue
+          if ($pluginXml) {
+            Write-Host "Found plugin.xml: $($pluginXml.FullName)"
+            Get-Content $pluginXml.FullName
+          } else {
+            Write-Warning "No plugin.xml found!"
           }
           
           # Package the PARENT directory so zip contains "AnalogSynth.vst3/" folder
