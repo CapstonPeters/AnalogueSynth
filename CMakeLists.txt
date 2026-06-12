@@ -5,11 +5,29 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# JUCE source directory
-set(JUCE_DIR "/home/jo/JUCE" CACHE PATH "Path to JUCE source")
-
-# Include JUCE's CMake support - this provides juce_add_plugin etc.
-add_subdirectory(${JUCE_DIR} ${CMAKE_BINARY_DIR}/juce-build)
+# Option 1: Use local JUCE if JUCE_DIR is set and exists
+# Option 2: Fetch JUCE from GitHub via FetchContent (for CI)
+if(DEFINED ENV{JUCE_DIR} AND EXISTS "$ENV{JUCE_DIR}/CMakeLists.txt")
+    set(JUCE_DIR "$ENV{JUCE_DIR}" CACHE PATH "Path to JUCE source" FORCE)
+    message(STATUS "Using local JUCE at: ${JUCE_DIR}")
+    add_subdirectory(${JUCE_DIR} ${CMAKE_BINARY_DIR}/juce-build)
+elseif(DEFINED ENV{JUCE_SOURCE_DIR} AND EXISTS "$ENV{JUCE_SOURCE_DIR}/CMakeLists.txt")
+    set(JUCE_DIR "$ENV{JUCE_SOURCE_DIR}" CACHE PATH "Path to JUCE source" FORCE)
+    message(STATUS "Using local JUCE at: ${JUCE_DIR}")
+    add_subdirectory(${JUCE_DIR} ${CMAKE_BINARY_DIR}/juce-build)
+else()
+    message(STATUS "Fetching JUCE 8.0.0 via FetchContent...")
+    include(FetchContent)
+    FetchContent_Declare(
+        juce
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG        8.0.0
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(juce)
+    set(JUCE_DIR ${juce_SOURCE_DIR})
+    message(STATUS "Using fetched JUCE at: ${JUCE_DIR}")
+endif()
 
 # Our plugin - this is the modern JUCE way
 juce_add_plugin(AnalogSynth
@@ -57,7 +75,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     )
 endif()
 
-# VST3-specific settings for Linux
+# VST3-specific settings
 target_compile_definitions(AnalogSynth PRIVATE
     JUCE_VST3_CUSTOM_BUNDLE_SUFFIX="\"\""
     JUCE_PLUGIN_NAME="AnalogSynth"

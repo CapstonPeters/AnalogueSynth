@@ -1,0 +1,60 @@
+name: Build Windows VST3
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28'
+
+      - name: Fetch JUCE submodule
+        run: |
+          git submodule update --init --recursive
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Release
+        run: |
+          cd build
+          cmake --build . --config Release --parallel
+
+      - name: Find VST3 bundle
+        id: find-vst3
+        shell: pwsh
+        run: |
+          $vst3 = Get-ChildItem -Path "build\AnalogSynth_artefacts\Release\VST3\AnalogSynth.vst3" -Directory -ErrorAction SilentlyContinue
+          if (-not $vst3) {
+            Write-Error "VST3 bundle not found"
+            exit 1
+          }
+          echo "vst3_path=$($vst3.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Package VST3
+        run: |
+          cd build\AnalogSynth_artefacts\Release\VST3
+          Compress-Archive -Path "AnalogSynth.vst3\*" -DestinationPath "..\..\..\AnalogSynth-Windows.vst3.zip"
+
+      - name: Upload VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnalogSynth-Windows-VST3
+          path: AnalogSynth-Windows.vst3.zip
+          retention-days: 30
