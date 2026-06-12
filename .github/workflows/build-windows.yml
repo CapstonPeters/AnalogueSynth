@@ -42,6 +42,27 @@ jobs:
           Get-ChildItem -Path "build" -Recurse -Directory | Where-Object {$_.Name -like "*artefact*" -or $_.Name -like "*VST3*"} | Select-Object FullName
           Write-Host "=== Searching for VST3 bundles ==="
           Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" | Select-Object FullName
+
+      - name: Debug - Full VST3 structure
+        shell: pwsh
+        run: |
+          $vst3Dirs = Get-ChildItem -Path "build" -Recurse -Directory -Filter "AnalogSynth.vst3" -ErrorAction SilentlyContinue
+          if ($vst3Dirs) {
+            $vst3Dir = $vst3Dirs[0].FullName
+            Write-Host "=== FULL VST3 TREE ==="
+            Get-ChildItem -Path $vst3Dir -Recurse -Force | Select-Object FullName, Length
+            
+            Write-Host "=== plugin.xml CONTENTS ==="
+            $pluginXml = "$vst3Dir\Contents\plugin.xml"
+            if (Test-Path $pluginXml) { Get-Content $pluginXml } else { Write-Warning "plugin.xml NOT FOUND" }
+            
+            Write-Host "=== moduleinfo.json CONTENTS ==="
+            $moduleInfo = "$vst3Dir\Contents\x86_64-win\moduleinfo.json"
+            if (Test-Path $moduleInfo) { Get-Content $moduleInfo } else { Write-Warning "moduleinfo.json NOT FOUND" }
+            
+            Write-Host "=== DLL FOUND ==="
+            Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName, Length
+          }
           Write-Host "=== Full Contents of any VST3 found ==="
           $vst3Dirs = Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" -ErrorAction SilentlyContinue
           foreach ($v in $vst3Dirs) {
