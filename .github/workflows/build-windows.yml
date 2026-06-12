@@ -48,6 +48,14 @@ jobs:
             Write-Host "VST3: $($v.FullName)"
             Get-ChildItem -Path $v.FullName -Recurse | Select-Object FullName, Length
           }
+          Write-Host "=== Also check build/AnalogSynth_artefacts ==="
+          if (Test-Path "build/AnalogSynth_artefacts") {
+            Get-ChildItem -Path "build/AnalogSynth_artefacts" -Recurse | Select-Object FullName, Length
+          }
+          Write-Host "=== Also check build/Release ==="
+          if (Test-Path "build/Release") {
+            Get-ChildItem -Path "build/Release" -Recurse | Where-Object {$_.Name -like "*.vst3*"} | Select-Object FullName, Length
+          }
 
       - name: Find and package VST3
         id: package-vst3
