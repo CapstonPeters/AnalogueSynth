@@ -42,6 +42,7 @@ juce_add_plugin(AnalogSynth
     PLUGIN_DESCRIPTION "3-oscillator analog-style VST3 synthesizer"
     FORMATS VST3
     CXX_STANDARD 20
+    VST3_CATEGORIES "Instrument|Synth"
 )
 
 # Add our source files to the plugin target
@@ -80,4 +81,5 @@ target_compile_definitions(AnalogSynth PRIVATE
     JUCE_VST3_CUSTOM_BUNDLE_SUFFIX="\"\""
     JUCE_PLUGIN_NAME="AnalogSynth"
     JUCE_VST3_CAN_REPLACE_VST2=0
+    JucePlugin_IsSynth=1
 )
