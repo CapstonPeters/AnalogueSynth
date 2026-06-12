@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <algorithm>
 
 //==============================================================================
 AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
@@ -29,12 +30,15 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
-    // Handle MIDI
+    // DIAGNOSTIC: Log MIDI activity
+    int midiEventCount = 0;
     for (const auto metadata : midiMessages)
     {
+        ++midiEventCount;
         const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
+            DBG("MIDI NoteOn: note=" << msg.getNoteNumber() << " vel=" << msg.getVelocity());
             // Find free voice
             for (auto& v : voices)
             {
@@ -47,6 +51,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         }
         else if (msg.isNoteOff())
         {
+            DBG("MIDI NoteOff: note=" << msg.getNoteNumber());
             // Find voice playing this note
             for (auto& v : voices)
             {
@@ -57,6 +62,12 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                 }
             }
         }
+    }
+    static int s_logCount = 0;
+    if (++s_logCount % 1000 == 0) // Log every ~1000 blocks
+    {
+        DBG("processBlock: midiEvents=" << midiEventCount << " activeVoices=" 
+            << std::count_if(voices.begin(), voices.end(), [](auto& v){ return v.isActive(); }));
     }
 
     // Process audio
