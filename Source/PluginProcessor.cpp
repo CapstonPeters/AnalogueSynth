@@ -68,7 +68,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         {
             if (v.isActive())
             {
-                float s = v.process();
+                float s = v.process() * 3.0f;  // Boost gain for testing
                 sumL += s;
                 sumR += s;
             }
