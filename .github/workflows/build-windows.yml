@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -21,10 +24,6 @@ jobs:
         with:
           cmake-version: '3.28'
 
-      - name: Fetch JUCE submodule
-        run: |
-          git submodule update --init --recursive
-
       - name: Configure CMake
         run: |
           mkdir build
@@ -36,25 +35,46 @@ jobs:
           cd build
           cmake --build . --config Release --parallel
 
-      - name: Find VST3 bundle
-        id: find-vst3
+      - name: Debug - List build output
         shell: pwsh
         run: |
-          $vst3 = Get-ChildItem -Path "build\AnalogSynth_artefacts\Release\VST3\AnalogSynth.vst3" -Directory -ErrorAction SilentlyContinue
-          if (-not $vst3) {
-            Write-Error "VST3 bundle not found"
+          Write-Host "=== Build directory structure ==="
+          Get-ChildItem -Path "build" -Recurse -Directory | Where-Object {$_.Name -like "*artefact*" -or $_.Name -like "*VST3*"} | Select-Object FullName
+          Write-Host "=== Searching for VST3 bundles ==="
+          Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" | Select-Object FullName
+
+      - name: Find and package VST3
+        id: package-vst3
+        shell: pwsh
+        run: |
+          # Find the VST3 bundle
+          $vst3Dirs = Get-ChildItem -Path "build" -Recurse -Directory -Filter "AnalogSynth.vst3" -ErrorAction SilentlyContinue
+          if (-not $vst3Dirs) {
+            Write-Error "No AnalogSynth.vst3 directory found!"
             exit 1
           }
-          echo "vst3_path=$($vst3.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-
-      - name: Package VST3
-        run: |
-          cd build\AnalogSynth_artefacts\Release\VST3
-          Compress-Archive -Path "AnalogSynth.vst3\*" -DestinationPath "..\..\..\AnalogSynth-Windows.vst3.zip"
+          
+          $vst3Dir = $vst3Dirs[0].FullName
+          Write-Host "Found VST3 at: $vst3Dir"
+          
+          # Verify it has the right structure
+          $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
+          if ($dll) {
+            Write-Host "Found plugin DLL: $($dll.FullName)"
+          } else {
+            Write-Warning "No DLL found in x86_64-win, checking all Contents..."
+            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName
+          }
+          
+          # Package it
+          $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
+          Compress-Archive -Path "$vst3Dir\*" -DestinationPath $zipPath -Force
+          Write-Host "Created zip: $zipPath"
+          echo "zip_path=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Upload VST3 artifact
         uses: actions/upload-artifact@v4
         with:
           name: AnalogSynth-Windows-VST3
-          path: AnalogSynth-Windows.vst3.zip
+          path: ${{ steps.package-vst3.outputs.zip_path }}
           retention-days: 30
