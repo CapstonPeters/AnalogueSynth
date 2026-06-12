@@ -55,6 +55,7 @@ jobs:
           }
           
           $vst3Dir = $vst3Dirs[0].FullName
+          $parentDir = Split-Path $vst3Dir
           Write-Host "Found VST3 at: $vst3Dir"
           
           # Verify it has the right structure
@@ -66,9 +67,9 @@ jobs:
             Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName
           }
           
-          # Package it
+          # Package the PARENT directory so zip contains "AnalogSynth.vst3/" folder
           $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
-          Compress-Archive -Path "$vst3Dir\*" -DestinationPath $zipPath -Force
+          Compress-Archive -Path "$parentDir\AnalogSynth.vst3" -DestinationPath $zipPath -Force
           Write-Host "Created zip: $zipPath"
           echo "zip_path=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
