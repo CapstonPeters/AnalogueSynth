@@ -22,11 +22,15 @@ jobs:
           cmake-version: '3.28'
 
       - name: Configure CMake
+        shell: cmd
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
 
       - name: Build Release
+        shell: cmd
         run: |
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cmake --build build --config Release
 
       - name: Debug - List build output
