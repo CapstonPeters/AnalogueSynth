@@ -53,6 +53,32 @@ jobs:
           $vst3Dir = $vst3Dirs[0].FullName
           $parentDir = Split-Path $vst3Dir
           Write-Host "Found VST3 at: $vst3Dir"
+          
+          # DEBUG: Show full VST3 bundle structure
+          Write-Host "=== FULL VST3 TREE ==="
+          Get-ChildItem -Path "$vst3Dir" -Recurse | Select-Object FullName, Length
+          
+          # DEBUG: Check plugin.xml
+          Write-Host "=== plugin.xml CONTENTS ==="
+          $pluginXml = "$vst3Dir\Contents\x86_64-win\plugin.xml"
+          if (Test-Path $pluginXml) {
+            Get-Content $pluginXml
+          } else {
+            Write-Warning "plugin.xml NOT FOUND at $pluginXml"
+            # Check other locations
+            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "plugin.xml" | Select-Object FullName
+          }
+          
+          # DEBUG: Check moduleinfo.json
+          Write-Host "=== moduleinfo.json CONTENTS ==="
+          $moduleInfo = "$vst3Dir\Contents\x86_64-win\moduleinfo.json"
+          if (Test-Path $moduleInfo) {
+            Get-Content $moduleInfo
+          } else {
+            Write-Warning "moduleinfo.json NOT FOUND at $moduleInfo"
+            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "moduleinfo.json" | Select-Object FullName
+          }
+          
           $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
           if ($dll) {
             Write-Host "Found plugin DLL: $($dll.FullName)"
@@ -60,6 +86,7 @@ jobs:
             Write-Warning "No DLL found in x86_64-win, checking all Contents..."
             Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName
           }
+          
           $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
           Compress-Archive -Path "$parentDir\AnalogSynth.vst3" -DestinationPath $zipPath -Force
           Write-Host "Created zip: $zipPath"
