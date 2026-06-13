@@ -20,10 +20,7 @@ jobs:
           submodules: recursive
 
       - name: Setup MSVC environment
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-          sdk: latest
+        uses: seanmiddleditch/gha-setup-msbuild@v2
 
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
