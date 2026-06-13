@@ -19,6 +19,12 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install Visual Studio Build Tools
+        uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: '[17.0,)'
+          msbuild-architecture: x64
+
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
