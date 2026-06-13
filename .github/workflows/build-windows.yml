@@ -5,9 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -19,28 +16,18 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Visual Studio 2022 x64 environment
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-          vsversion: 2022
-
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.28'
 
       - name: Configure CMake
-        shell: cmd
         run: |
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build Release
         run: |
-          cd build
-          cmake --build . --config Release --parallel
+          cmake --build build --config Release
 
       - name: Debug - List build output
         shell: pwsh
@@ -50,75 +37,25 @@ jobs:
           Write-Host "=== Searching for VST3 bundles ==="
           Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" | Select-Object FullName
 
-      - name: Debug - Full VST3 structure
-        shell: pwsh
-        run: |
-          $vst3Dirs = Get-ChildItem -Path "build" -Recurse -Directory -Filter "AnalogSynth.vst3" -ErrorAction SilentlyContinue
-          if ($vst3Dirs) {
-            $vst3Dir = $vst3Dirs[0].FullName
-            Write-Host "=== FULL VST3 TREE ==="
-            Get-ChildItem -Path $vst3Dir -Recurse -Force | Select-Object FullName, Length
-            
-            Write-Host "=== plugin.xml CONTENTS ==="
-            $pluginXml = "$vst3Dir\Contents\plugin.xml"
-            if (Test-Path $pluginXml) { Get-Content $pluginXml } else { Write-Warning "plugin.xml NOT FOUND" }
-            
-            Write-Host "=== moduleinfo.json CONTENTS ==="
-            $moduleInfo = "$vst3Dir\Contents\x86_64-win\moduleinfo.json"
-            if (Test-Path $moduleInfo) { Get-Content $moduleInfo } else { Write-Warning "moduleinfo.json NOT FOUND" }
-            
-            Write-Host "=== DLL FOUND ==="
-            Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName, Length
-          }
-          Write-Host "=== Full Contents of any VST3 found ==="
-          $vst3Dirs = Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" -ErrorAction SilentlyContinue
-          foreach ($v in $vst3Dirs) {
-            Write-Host "VST3: $($v.FullName)"
-            Get-ChildItem -Path $v.FullName -Recurse | Select-Object FullName, Length
-          }
-          Write-Host "=== Also check build/AnalogSynth_artefacts ==="
-          if (Test-Path "build/AnalogSynth_artefacts") {
-            Get-ChildItem -Path "build/AnalogSynth_artefacts" -Recurse | Select-Object FullName, Length
-          }
-          Write-Host "=== Also check build/Release ==="
-          if (Test-Path "build/Release") {
-            Get-ChildItem -Path "build/Release" -Recurse | Where-Object {$_.Name -like "*.vst3*"} | Select-Object FullName, Length
-          }
-
       - name: Find and package VST3
         id: package-vst3
         shell: pwsh
         run: |
-          # Find the VST3 bundle
           $vst3Dirs = Get-ChildItem -Path "build" -Recurse -Directory -Filter "AnalogSynth.vst3" -ErrorAction SilentlyContinue
           if (-not $vst3Dirs) {
             Write-Error "No AnalogSynth.vst3 directory found!"
             exit 1
           }
-          
           $vst3Dir = $vst3Dirs[0].FullName
           $parentDir = Split-Path $vst3Dir
           Write-Host "Found VST3 at: $vst3Dir"
-          
-          # Verify it has the right structure
           $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
           if ($dll) {
-            Write-Host "Found plugin DLL: $($dll.FullName) (size: $($dll.Length) bytes)"
+            Write-Host "Found plugin DLL: $($dll.FullName)"
           } else {
             Write-Warning "No DLL found in x86_64-win, checking all Contents..."
-            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName, Length
+            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName
           }
-          
-          # Verify plugin.xml exists
-          $pluginXml = Get-ChildItem -Path "$vst3Dir\Contents" -Filter "plugin.xml" -ErrorAction SilentlyContinue
-          if ($pluginXml) {
-            Write-Host "Found plugin.xml: $($pluginXml.FullName)"
-            Get-Content $pluginXml.FullName
-          } else {
-            Write-Warning "No plugin.xml found!"
-          }
-          
-          # Package the PARENT directory so zip contains "AnalogSynth.vst3/" folder
           $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
           Compress-Archive -Path "$parentDir\AnalogSynth.vst3" -DestinationPath $zipPath -Force
           Write-Host "Created zip: $zipPath"
