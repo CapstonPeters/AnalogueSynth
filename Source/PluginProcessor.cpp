@@ -74,6 +74,14 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
 
     // Process audio
     const int numSamples = buffer.getNumSamples();
+    static int s_blockCount = 0;
+    if (s_blockCount < 5) {
+        DBG("processBlock #" << s_blockCount << ": numSamples=" << numSamples 
+            << " channels=" << buffer.getNumChannels()
+            << " testToneActive=" << testToneActive.load());
+    }
+    ++s_blockCount;
+    
     for (int i = 0; i < numSamples; ++i)
     {
         float sumL = 0, sumR = 0;
@@ -86,15 +94,16 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                 sumR += s;
             }
         }
-        // Add test tone if active
+        // Add test tone if active - MUCH HIGHER GAIN
         if (testToneActive.load())
         {
-            float t = testToneOsc.process() * 0.5f;  // Lower gain for test tone
+            float t = testToneOsc.process() * 3.0f;  // Same gain as voices
             sumL += t;
             sumR += t;
         }
-        buffer.addSample(0, i, sumL);
-        buffer.addSample(1, i, sumR);
+        // Force write to both channels
+        if (buffer.getNumChannels() > 0) buffer.addSample(0, i, sumL);
+        if (buffer.getNumChannels() > 1) buffer.addSample(1, i, sumR);
     }
 }
 
