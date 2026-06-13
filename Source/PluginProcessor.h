@@ -17,6 +17,7 @@ public:
     void setFrequency(float f) { freq = f; phaseInc = f / sr * 2.0 * juce::MathConstants<double>::pi; }
     void noteOn() { phase = 0; active = true; }
     void noteOff() { active = false; }
+    void setActive(bool a) { active = a; if (a) phase = 0; }
     bool isActive() const { return active; }
     float process()
     {
@@ -84,12 +85,18 @@ public:
     const juce::String getProgramName (int) override { return {}; }
     void changeProgramName (int, const juce::String&) override {}
 
+    // Test tone control (for debugging audio path)
+    void setTestToneActive(bool active) { testToneActive.store(active); if (active) testToneOsc.setActive(true); else testToneOsc.setActive(false); }
+    bool isTestToneActive() const { return testToneActive.load(); }
+
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
     std::vector<TestVoice> voices;
     double currentSampleRate = 44100;
+    TestOscillator testToneOsc;
+    std::atomic<bool> testToneActive{false};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessor)
 };

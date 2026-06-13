@@ -15,6 +15,8 @@ void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 {
     currentSampleRate = sampleRate;
     for (auto& v : voices) v.prepare(sampleRate);
+    testToneOsc.prepare(sampleRate);
+    testToneOsc.setFrequency(440.0f); // A4
     juce::ignoreUnused (samplesPerBlock);
 }
 
@@ -83,6 +85,13 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                 sumL += s;
                 sumR += s;
             }
+        }
+        // Add test tone if active
+        if (testToneActive.load())
+        {
+            float t = testToneOsc.process() * 0.5f;  // Lower gain for test tone
+            sumL += t;
+            sumR += t;
         }
         buffer.addSample(0, i, sumL);
         buffer.addSample(1, i, sumR);
