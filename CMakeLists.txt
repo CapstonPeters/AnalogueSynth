@@ -83,3 +83,9 @@ target_compile_definitions(AnalogSynth PRIVATE
     JUCE_VST3_CAN_REPLACE_VST2=0
     JucePlugin_IsSynth=1
 )
+
+# Enable VST3 module generation (ensures plugin.xml, moduleinfo.json are created)
+set_target_properties(AnalogSynth PROPERTIES
+    VST3_MODULE_NAME "AnalogSynth"
+    VST3_PLUGIN_CLASS "AnalogSynthAudioProcessor"
+)
