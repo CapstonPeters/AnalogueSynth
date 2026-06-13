@@ -82,10 +82,12 @@ target_compile_definitions(AnalogSynth PRIVATE
     JUCE_PLUGIN_NAME="AnalogSynth"
     JUCE_VST3_CAN_REPLACE_VST2=0
     JucePlugin_IsSynth=1
+    JucePlugin_VST3PluginUID="{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}"
 )
 
 # Enable VST3 module generation (ensures plugin.xml, moduleinfo.json are created)
 set_target_properties(AnalogSynth PROPERTIES
     VST3_MODULE_NAME "AnalogSynth"
+    VST3_PLUGIN_UID "E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B"
     VST3_PLUGIN_CLASS "AnalogSynthAudioProcessor"
 )
