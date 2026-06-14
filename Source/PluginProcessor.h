@@ -617,6 +617,15 @@ private:
 };
 
 //==============================================================================
+// Simple sound class for Synthesiser
+class SimpleSynthSound : public juce::SynthesiserSound
+{
+public:
+    bool appliesToNote (int /*midiNoteNumber*/) override { return true; }
+    bool appliesToChannel (int /*midiChannel*/) override { return true; }
+};
+
+//==============================================================================
 // Synth (voice management)
 class Synth : public juce::Synthesiser
 {
@@ -627,6 +636,10 @@ public:
             if (auto* sv = dynamic_cast<SynthVoice*>(v))
                 sv->setParams(apvts);
     }
+
+    // Expose voices for iteration
+    const juce::OwnedArray<juce::SynthesiserVoice>& getVoicesArray() const { return voices; }
+    juce::OwnedArray<juce::SynthesiserVoice>& getVoicesArray() { return voices; }
 };
 
 //==============================================================================

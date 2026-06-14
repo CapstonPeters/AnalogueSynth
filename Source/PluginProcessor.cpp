@@ -108,15 +108,13 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
     for (int i = 0; i < 16; ++i)
         synth.addVoice(new SynthVoice());
 
-    synth.addSound(new juce::SynthesiserSound());
+    synth.addSound(new SimpleSynthSound());
 }
-
-AnalogSynthAudioProcessor::~AnalogSynthAudioProcessor() {}
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     synth.setCurrentPlaybackSampleRate(sampleRate);
-    for (auto* v : synth.getVoices())
+    for (auto* v : synth.getVoicesArray())
         if (auto* sv = dynamic_cast<SynthVoice*>(v))
             sv->prepare(sampleRate);
 
