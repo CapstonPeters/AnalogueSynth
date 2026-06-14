@@ -3,21 +3,125 @@
 #include <algorithm>
 
 //==============================================================================
+juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    auto addFloat = [&](const char* id, const char* name, float min, float max, float def)
+    { params.push_back(std::make_unique<juce::AudioParameterFloat>(id, name, min, max, def)); };
+    auto addInt = [&](const char* id, const char* name, int min, int max, int def)
+    { params.push_back(std::make_unique<juce::AudioParameterInt>(id, name, min, max, def)); };
+    auto addChoice = [&](const char* id, const char* name, const juce::StringArray& choices, int def)
+    { params.push_back(std::make_unique<juce::AudioParameterChoice>(id, name, choices, def)); };
+
+    // Global
+    addFloat(ParamID::masterVolume, "Master Volume", -60.0f, 12.0f, 0.0f);
+    addFloat(ParamID::masterTune,   "Master Tune",    -12.0f, 12.0f, 0.0f);
+    addInt   (ParamID::polyphony,   "Polyphony",      1, 16, 8);
+    addInt   (ParamID::unisonVoices, "Unison Voices", 1, 8, 1);
+    addFloat (ParamID::unisonDetune, "Unison Detune", 0.0f, 50.0f, 5.0f);
+    addFloat (ParamID::unisonSpread, "Unison Spread", 0.0f, 100.0f, 20.0f);
+
+    // Oscillator 1
+    addChoice(ParamID::osc1Waveform, "Osc 1 Waveform", { "Sine", "Triangle", "Saw", "Square", "Noise" }, 2);
+    addFloat(ParamID::osc1Level,      "Osc 1 Level",      0.0f, 1.0f, 1.0f);
+    addFloat(ParamID::osc1Pitch,      "Osc 1 Pitch",      -24.0f, 24.0f, 0.0f);
+    addFloat(ParamID::osc1Detune,     "Osc 1 Detune",     -100.0f, 100.0f, 0.0f);
+    addFloat(ParamID::osc1Pan,        "Osc 1 Pan",        -1.0f, 1.0f, 0.0f);
+    addFloat(ParamID::osc1PulseWidth, "Osc 1 Pulse Width", 0.01f, 0.99f, 0.5f);
+
+    // Oscillator 2
+    addChoice(ParamID::osc2Waveform, "Osc 2 Waveform", { "Sine", "Triangle", "Saw", "Square", "Noise" }, 2);
+    addFloat(ParamID::osc2Level,      "Osc 2 Level",      0.0f, 1.0f, 0.5f);
+    addFloat(ParamID::osc2Pitch,      "Osc 2 Pitch",      -24.0f, 24.0f, 0.0f);
+    addFloat(ParamID::osc2Detune,     "Osc 2 Detune",     -100.0f, 100.0f, 0.0f);
+    addFloat(ParamID::osc2Pan,        "Osc 2 Pan",        -1.0f, 1.0f, 0.0f);
+    addFloat(ParamID::osc2PulseWidth, "Osc 2 Pulse Width", 0.01f, 0.99f, 0.5f);
+
+    // Oscillator 3
+    addChoice(ParamID::osc3Waveform, "Osc 3 Waveform", { "Sine", "Triangle", "Saw", "Square", "Noise" }, 0);
+    addFloat(ParamID::osc3Level,      "Osc 3 Level",      0.0f, 1.0f, 0.0f);
+    addFloat(ParamID::osc3Pitch,      "Osc 3 Pitch",      -24.0f, 24.0f, 0.0f);
+    addFloat(ParamID::osc3Detune,     "Osc 3 Detune",     -100.0f, 100.0f, 0.0f);
+    addFloat(ParamID::osc3Pan,        "Osc 3 Pan",        -1.0f, 1.0f, 0.0f);
+    addFloat(ParamID::osc3PulseWidth, "Osc 3 Pulse Width", 0.01f, 0.99f, 0.5f);
+
+    // Mix
+    addFloat(ParamID::oscMixBalance12,  "Osc 1/2 Balance", -1.0f, 1.0f, 0.0f);
+    addFloat(ParamID::oscMixBalance123, "Osc 12/3 Balance", -1.0f, 1.0f, 0.0f);
+    addFloat(ParamID::noiseLevel,       "Noise Level", 0.0f, 1.0f, 0.0f);
+    addFloat(ParamID::subLevel,         "Sub Level",   0.0f, 1.0f, 0.0f);
+
+    // Filter
+    addChoice(ParamID::filterType, "Filter Type", { "LP12", "LP24", "HP12", "HP24", "BP12", "BP24", "Notch" }, 1);
+    addFloat(ParamID::filterCutoff,    "Filter Cutoff",    20.0f, 20000.0f, 10000.0f);
+    addFloat(ParamID::filterResonance, "Filter Resonance", 0.0f, 1.0f, 0.0f);
+    addFloat(ParamID::filterDrive,     "Filter Drive",     0.0f, 10.0f, 0.0f);
+    addFloat(ParamID::filterKeyTrack,  "Filter Key Track", -1.0f, 1.0f, 0.5f);
+    addFloat(ParamID::filterVelTrack,  "Filter Vel Track", -1.0f, 1.0f, 0.0f);
+    addFloat(ParamID::filterEnvAmount, "Filter Env Amount", -1.0f, 1.0f, 0.0f);
+
+    // Amp Envelope
+    addFloat(ParamID::ampAttack,  "Amp Attack",  0.001f, 10.0f, 0.01f);
+    addFloat(ParamID::ampDecay,   "Amp Decay",   0.001f, 10.0f, 0.1f);
+    addFloat(ParamID::ampSustain, "Amp Sustain", 0.0f,   1.0f,  0.7f);
+    addFloat(ParamID::ampRelease, "Amp Release", 0.001f, 10.0f, 0.2f);
+
+    // Filter Envelope
+    addFloat(ParamID::filtAttack,  "Filt Attack",  0.001f, 10.0f, 0.01f);
+    addFloat(ParamID::filtDecay,   "Filt Decay",   0.001f, 10.0f, 0.1f);
+    addFloat(ParamID::filtSustain, "Filt Sustain", 0.0f,   1.0f,  0.0f);
+    addFloat(ParamID::filtRelease, "Filt Release", 0.001f, 10.0f, 0.2f);
+
+    // LFO 1
+    addFloat(ParamID::lfo1Rate,     "LFO 1 Rate",     0.01f, 30.0f, 1.0f);
+    addChoice(ParamID::lfo1Waveform, "LFO 1 Waveform", { "Sine", "Triangle", "Saw", "Square", "S&H" }, 0);
+    addFloat(ParamID::lfo1Delay,    "LFO 1 Delay",    0.0f, 5.0f, 0.0f);
+    addFloat(ParamID::lfo1Fade,     "LFO 1 Fade",     0.0f, 5.0f, 0.0f);
+
+    // LFO 2
+    addFloat(ParamID::lfo2Rate,     "LFO 2 Rate",     0.01f, 30.0f, 0.5f);
+    addChoice(ParamID::lfo2Waveform, "LFO 2 Waveform", { "Sine", "Triangle", "Saw", "Square", "S&H" }, 1);
+    addFloat(ParamID::lfo2Delay,    "LFO 2 Delay",    0.0f, 5.0f, 0.0f);
+    addFloat(ParamID::lfo2Fade,     "LFO 2 Fade",     0.0f, 5.0f, 0.0f);
+
+    // Mod Matrix (8 slots)
+    juce::StringArray modSources = { "None", "LFO 1", "LFO 2", "Amp Env", "Filt Env", "Velocity", "Mod Wheel", "Aftertouch", "Pitch Bend", "Key Track" };
+    juce::StringArray modDests = { "None", "Osc 1 Pitch", "Osc 2 Pitch", "Osc 3 Pitch", "All Osc Pitch", "Osc 1 Level", "Osc 2 Level", "Osc 3 Level", "Filter Cutoff", "Filter Resonance", "Filter Drive", "Amp Level", "Pan", "LFO 1 Rate", "LFO 2 Rate" };
+
+    for (int i = 0; i < 8; ++i)
+    {
+        addChoice(ParamID::modSrc[i], "Mod " + juce::String(i+1) + " Source", modSources, 0);
+        addChoice(ParamID::modDst[i], "Mod " + juce::String(i+1) + " Dest",   modDests, 0);
+        addFloat(ParamID::modAmt[i],  "Mod " + juce::String(i+1) + " Amount", -1.0f, 1.0f, 0.0f);
+    }
+
+    return { params.begin(), params.end() };
+}
+
+//==============================================================================
 AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true))
+    , apvts (*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    // Initialize 8 voices
-    for (int i = 0; i < 8; ++i)
-        voices.emplace_back();
+    // Initialize 16 voices max
+    for (int i = 0; i < 16; ++i)
+        synth.addVoice(new SynthVoice());
+
+    synth.addSound(new juce::SynthesiserSound());
 }
+
+AnalogSynthAudioProcessor::~AnalogSynthAudioProcessor() {}
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    currentSampleRate = sampleRate;
-    for (auto& v : voices) v.prepare(sampleRate);
+    synth.setCurrentPlaybackSampleRate(sampleRate);
+    for (auto* v : synth.getVoices())
+        if (auto* sv = dynamic_cast<SynthVoice*>(v))
+            sv->prepare(sampleRate);
+
     testToneOsc.prepare(sampleRate);
-    testToneOsc.setFrequency(440.0f); // A4
-    juce::ignoreUnused (samplesPerBlock);
+    testToneOsc.setFrequency(440.0f);
 }
 
 void AnalogSynthAudioProcessor::releaseResources() {}
@@ -32,80 +136,59 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
-    // DIAGNOSTIC: Log MIDI activity EVERY BLOCK
+    // Update synth params from APVTS (could be optimized with change callbacks)
+    synth.setParams(apvts);
+
+    // Update polyphony
+    int targetPoly = apvts.getRawParameterValue(ParamID::polyphony)->load();
+    // (Synthesiser handles voice stealing automatically)
+
+    // Process MIDI
     for (const auto metadata : midiMessages)
     {
         const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
             DBG("MIDI NoteOn: note=" << msg.getNoteNumber() << " vel=" << msg.getVelocity());
-            for (auto& v : voices)
-            {
-                if (!v.isActive())
-                {
-                    v.startNote(msg.getNoteNumber(), msg.getVelocity());
-                    break;
-                }
-            }
         }
         else if (msg.isNoteOff())
         {
             DBG("MIDI NoteOff: note=" << msg.getNoteNumber());
-            for (auto& v : voices)
-            {
-                if (v.isActive() && v.getNote() == msg.getNoteNumber())
-                {
-                    v.stopNote();
-                    break;
-                }
-            }
         }
     }
 
-    // Process audio
-    const int numSamples = buffer.getNumSamples();
-    static int s_blockCount = 0;
-    if (++s_blockCount <= 10 || testToneActive.load()) {
-        DBG("processBlock #" << s_blockCount << ": numSamples=" << numSamples
-            << " channels=" << buffer.getNumChannels()
-            << " testToneActive=" << testToneActive.load()
-            << " testToneOscActive=" << testToneOsc.isActive());
-    }
+    // Render
+    juce::MidiBuffer midiCopy = midiMessages;
+    synth.renderNextBlock(buffer, midiCopy, 0, buffer.getNumSamples());
 
-    for (int i = 0; i < numSamples; ++i)
+    // Test tone (for debugging)
+    if (testToneActive.load())
     {
-        float sumL = 0, sumR = 0;
-        for (auto& v : voices)
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
         {
-            if (v.isActive())
-            {
-                float s = v.process() * 3.0f;  // Boost gain for testing
-                sumL += s;
-                sumR += s;
-            }
-        }
-        // Add test tone if active - SAME GAIN AS VOICES
-        if (testToneActive.load())
-        {
-            // Ensure oscillator is running
-            if (!testToneOsc.isActive())
-                testToneOsc.noteOn();
-
+            if (!testToneOsc.isActive()) testToneOsc.noteOn();
             float t = testToneOsc.process() * 3.0f;
-            sumL += t;
-            sumR += t;
-
-            if (s_blockCount <= 5 && i == 0) {
-                DBG("Test tone sample 0: " << t << " phase=" << testToneOsc.getPhase());
-            }
+            if (buffer.getNumChannels() > 0) buffer.addSample(0, i, t);
+            if (buffer.getNumChannels() > 1) buffer.addSample(1, i, t);
         }
-        // Force write to both channels
-        if (buffer.getNumChannels() > 0) buffer.addSample(0, i, sumL);
-        if (buffer.getNumChannels() > 1) buffer.addSample(1, i, sumR);
     }
 }
 
-juce::AudioProcessorEditor* AnalogSynthAudioProcessor::createEditor() { return new AnalogSynthAudioProcessorEditor (*this); }
+juce::AudioProcessorEditor* AnalogSynthAudioProcessor::createEditor()
+{
+    return new AnalogSynthAudioProcessorEditor (*this);
+}
 
-void AnalogSynthAudioProcessor::getStateInformation (juce::MemoryBlock& destData) { juce::ignoreUnused (destData); }
-void AnalogSynthAudioProcessor::setStateInformation (const void* data, int sizeInBytes) { juce::ignoreUnused (data, sizeInBytes); }
+void AnalogSynthAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+{
+    auto state = apvts.copyState();
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    copyXmlToBinary (*xml, destData);
+}
+
+void AnalogSynthAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+    if (xmlState.get() != nullptr && xmlState->hasTagName (apvts.state.getType()))
+        apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+}
