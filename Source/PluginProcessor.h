@@ -682,7 +682,7 @@ public:
 
 private:
     Synth synth;
-    TestOscillator testToneOsc;
+    Oscillator testToneOsc;
     std::atomic<bool> testToneActive{false};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessor)

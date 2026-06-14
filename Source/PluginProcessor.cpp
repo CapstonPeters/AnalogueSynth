@@ -7,11 +7,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
-    auto addFloat = [&](const char* id, const char* name, float min, float max, float def)
+    auto addFloat = [&](const char* id, const juce::String& name, float min, float max, float def)
     { params.push_back(std::make_unique<juce::AudioParameterFloat>(id, name, min, max, def)); };
-    auto addInt = [&](const char* id, const char* name, int min, int max, int def)
+    auto addInt = [&](const char* id, const juce::String& name, int min, int max, int def)
     { params.push_back(std::make_unique<juce::AudioParameterInt>(id, name, min, max, def)); };
-    auto addChoice = [&](const char* id, const char* name, const juce::StringArray& choices, int def)
+    auto addChoice = [&](const char* id, const juce::String& name, const juce::StringArray& choices, int def)
     { params.push_back(std::make_unique<juce::AudioParameterChoice>(id, name, choices, def)); };
 
     // Global
