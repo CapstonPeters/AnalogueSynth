@@ -32,16 +32,13 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
-    // DIAGNOSTIC: Log MIDI activity
-    int midiEventCount = 0;
+    // DIAGNOSTIC: Log MIDI activity EVERY BLOCK
     for (const auto metadata : midiMessages)
     {
-        ++midiEventCount;
         const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
             DBG("MIDI NoteOn: note=" << msg.getNoteNumber() << " vel=" << msg.getVelocity());
-            // Find free voice
             for (auto& v : voices)
             {
                 if (!v.isActive())
@@ -54,7 +51,6 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         else if (msg.isNoteOff())
         {
             DBG("MIDI NoteOff: note=" << msg.getNoteNumber());
-            // Find voice playing this note
             for (auto& v : voices)
             {
                 if (v.isActive() && v.getNote() == msg.getNoteNumber())
@@ -64,12 +60,6 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                 }
             }
         }
-    }
-    static int s_logCount = 0;
-    if (++s_logCount % 1000 == 0) // Log every ~1000 blocks
-    {
-        DBG("processBlock: midiEvents=" << midiEventCount << " activeVoices=" 
-            << std::count_if(voices.begin(), voices.end(), [](auto& v){ return v.isActive(); }));
     }
 
     // Process audio
@@ -100,17 +90,14 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
             // Ensure oscillator is running
             if (!testToneOsc.isActive())
                 testToneOsc.noteOn();
-            
+
             float t = testToneOsc.process() * 3.0f;
             sumL += t;
             sumR += t;
-            
+
             if (s_blockCount <= 5 && i == 0) {
                 DBG("Test tone sample 0: " << t << " phase=" << testToneOsc.getPhase());
             }
-        }
-        else {
-            testToneOsc.noteOff();
         }
         // Force write to both channels
         if (buffer.getNumChannels() > 0) buffer.addSample(0, i, sumL);
