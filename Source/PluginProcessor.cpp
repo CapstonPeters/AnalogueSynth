@@ -75,10 +75,11 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Process audio
     const int numSamples = buffer.getNumSamples();
     static int s_blockCount = 0;
-    if (s_blockCount < 5) {
+    if (s_blockCount < 10) {
         DBG("processBlock #" << s_blockCount << ": numSamples=" << numSamples 
             << " channels=" << buffer.getNumChannels()
-            << " testToneActive=" << testToneActive.load());
+            << " testToneActive=" << testToneActive.load()
+            << " testToneOscActive=" << testToneOsc.isActive());
     }
     ++s_blockCount;
     
@@ -100,10 +101,28 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
             float t = testToneOsc.process() * 3.0f;  // Same gain as voices
             sumL += t;
             sumR += t;
+            if (s_blockCount < 5 && i == 0) {
+                DBG("Test tone sample 0: " << t);
+            }
         }
         // Force write to both channels
         if (buffer.getNumChannels() > 0) buffer.addSample(0, i, sumL);
         if (buffer.getNumChannels() > 1) buffer.addSample(1, i, sumR);
+        
+        if (s_blockCount < 3 && i == 0) {
+            DBG("Buffer write ch0: " << sumL << " ch1: " << sumR);
+        }
+    }
+    
+    // FORCE AUDIBLE OUTPUT on first 5 blocks regardless of testToneActive
+    if (s_blockCount <= 5)
+    {
+        for (int i = 0; i < numSamples; ++i)
+        {
+            float forcedTone = std::sin(s_blockCount * 0.001 + i * 0.1) * 0.5f;
+            if (buffer.getNumChannels() > 0) buffer.addSample(0, i, buffer.getSample(0, i) + forcedTone);
+            if (buffer.getNumChannels() > 1) buffer.addSample(1, i, buffer.getSample(1, i) + forcedTone);
+        }
     }
 }
 
