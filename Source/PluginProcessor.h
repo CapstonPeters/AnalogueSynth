@@ -19,6 +19,7 @@ public:
     void noteOff() { active = false; }
     void setActive(bool a) { active = a; if (a) phase = 0; }
     bool isActive() const { return active; }
+    double getPhase() const { return phase; }
     float process()
     {
         if (!active) return 0.0f;

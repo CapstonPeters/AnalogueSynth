@@ -11,6 +11,7 @@ AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAud
     testToneButton.setButtonText("Test Tone (A4)");
     testToneButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF2ECC71));
     testToneButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFFE74C3C));
+    testToneButton.setClickingTogglesState(true);
     testToneButton.onClick = [this]()
     {
         processorRef.setTestToneActive(testToneButton.getToggleState());
