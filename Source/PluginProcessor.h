@@ -113,6 +113,7 @@ public:
     void setPan(float p) { pan = p; }
     void noteOn() { phase = 0; for (auto& p : unisonPhases) p = 0; active = true; }
     void noteOff() { active = false; }
+    void setActive(bool a) { active = a; if (a) { phase = 0; for (auto& p : unisonPhases) p = 0; } }
     bool isActive() const { return active; }
 
     void setUnison(int voices, float detuneCents, float spread)
