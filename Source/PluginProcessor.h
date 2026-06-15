@@ -280,9 +280,9 @@ public:
 
     void prepare(double sampleRate) { DBG("LFO::prepare sr=" << sampleRate); sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 2000)); DBG("LFO::prepare done"); }
     void setWaveform(Waveform w) { waveform = w; }
-    void setRate(float hz) { rate = hz; updatePhaseInc(); }
+    void setRate(float hz) { rate = juce::jmax(0.01f, hz); updatePhaseInc(); }
     void setDelay(float d) { delay = d; delaySamples = static_cast<int>(d * sr); }
-    void setFade(float f) { fade = f; fadeSamples = static_cast<int>(f * sr); }
+    void setFade(float f) { fade = f; fadeSamples = juce::jmax(1, static_cast<int>(f * sr)); }
     void noteOn() { phase = 0; delayCounter = 0; fadeCounter = 0; active = true; }
     void noteOff() { active = false; }
     bool isActive() const { return active; }
@@ -314,7 +314,7 @@ public:
     }
 
 private:
-    void updatePhaseInc() { phaseInc = rate / sr * 2.0f * juce::MathConstants<float>::pi; shRate = static_cast<int>(sr / rate); }
+    void updatePhaseInc() { phaseInc = rate / sr * 2.0f * juce::MathConstants<float>::pi; shRate = static_cast<int>(sr / juce::jmax(0.01f, rate)); }
 
     double sr = 44100;
     Waveform waveform = Waveform::Sine;
@@ -324,7 +324,7 @@ private:
     float phaseInc = 0;
     float phase = 0;
     bool active = false;
-    int delaySamples = 0, fadeSamples = 0, delayCounter = 0, fadeCounter = 0;
+    int delaySamples = 0, fadeSamples = 1, delayCounter = 0, fadeCounter = 0;
     int shCounter = 0, shRate = 44100;
     float shValue = 0;
     FastRandom randGen;
@@ -602,20 +602,27 @@ public:
             }
 
             // Modulation sources
+            DBG("  renderNextBlock: lfo1.process()");
             float lfo1Val = lfo1.process();
+            DBG("  renderNextBlock: lfo2.process()");
             float lfo2Val = lfo2.process();
+            DBG("  renderNextBlock: ampEnv.process()");
             float ampEnvVal = ampEnv.process();
+            DBG("  renderNextBlock: filtEnv.process()");
             float filtEnvVal = filtEnv.process();
 
             // Generate oscillator signals
+            DBG("  renderNextBlock: osc process");
             float oscSum = 0;
             for (int o = 0; o < 3; ++o)
                 oscSum += oscillators[o].process();
 
             // Sub oscillator
+            DBG("  renderNextBlock: sub.process()");
             float sub = subOscillators[0].process() * subLevel;
 
             // Noise
+            DBG("  renderNextBlock: noise.process()");
             float noise = noiseOsc.process() * noiseLevel;
 
             float signal = (oscSum + sub + noise) * ampEnvVal;
@@ -624,6 +631,7 @@ public:
             if (!std::isfinite(signal)) { signal = 0; clearCurrentNote(); return; }
 
             // Filter (process stereo properly) - resonance already limited to 0.9 in setResonance
+            DBG("  renderNextBlock: filter.processStereo()");
             float left = signal;
             float right = signal;
             filter.processStereo(left, right);
