@@ -5,6 +5,7 @@
 //==============================================================================
 juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::createParameterLayout()
 {
+    DBG("createParameterLayout: START");
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     auto addFloat = [&](const char* id, const juce::String& name, float min, float max, float def)
@@ -14,6 +15,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     auto addChoice = [&](const char* id, const juce::String& name, const juce::StringArray& choices, int def)
     { params.push_back(std::make_unique<juce::AudioParameterChoice>(id, name, choices, def)); };
 
+    DBG("createParameterLayout: lambdas created, adding params...");
+
     // Global
     addFloat(ParamID::masterVolume, "Master Volume", -60.0f, 12.0f, 0.0f);
     addFloat(ParamID::masterTune,   "Master Tune",    -12.0f, 12.0f, 0.0f);
@@ -21,6 +24,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addInt   (ParamID::unisonVoices, "Unison Voices", 1, 8, 1);
     addFloat (ParamID::unisonDetune, "Unison Detune", 0.0f, 50.0f, 5.0f);
     addFloat (ParamID::unisonSpread, "Unison Spread", 0.0f, 100.0f, 20.0f);
+
+    DBG("createParameterLayout: global params added");
 
     // Oscillator 1
     addChoice(ParamID::osc1Waveform, "Osc 1 Waveform", { "Sine", "Triangle", "Saw", "Square", "Noise" }, 2);
@@ -51,6 +56,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParamID::oscMixBalance123, "Osc 12/3 Balance", -1.0f, 1.0f, 0.0f);
     addFloat(ParamID::noiseLevel,       "Noise Level", 0.0f, 1.0f, 0.0f);
     addFloat(ParamID::subLevel,         "Sub Level",   0.0f, 1.0f, 0.0f);
+
+    DBG("createParameterLayout: osc params added");
 
     // Filter
     addChoice(ParamID::filterType, "Filter Type", { "LP12", "LP24", "HP12", "HP24", "BP12", "BP24", "Notch" }, 1);
@@ -85,6 +92,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParamID::lfo2Delay,    "LFO 2 Delay",    0.0f, 5.0f, 0.0f);
     addFloat(ParamID::lfo2Fade,     "LFO 2 Fade",     0.0f, 5.0f, 0.0f);
 
+    DBG("createParameterLayout: env/lfo params added");
+
     // Mod Matrix (8 slots)
     juce::StringArray modSources = { "None", "LFO 1", "LFO 2", "Amp Env", "Filt Env", "Velocity", "Mod Wheel", "Aftertouch", "Pitch Bend", "Key Track" };
     juce::StringArray modDests = { "None", "Osc 1 Pitch", "Osc 2 Pitch", "Osc 3 Pitch", "All Osc Pitch", "Osc 1 Level", "Osc 2 Level", "Osc 3 Level", "Filter Cutoff", "Filter Resonance", "Filter Drive", "Amp Level", "Pan", "LFO 1 Rate", "LFO 2 Rate" };
@@ -96,6 +105,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
         addFloat(ParamID::modAmt[i],  "Mod " + juce::String(i+1) + " Amount", -1.0f, 1.0f, 0.0f);
     }
 
+    DBG("createParameterLayout: mod matrix params added, total=" << params.size());
     return { params.begin(), params.end() };
 }
 
