@@ -662,8 +662,7 @@ public:
 };
 
 //==============================================================================
-class AnalogSynthAudioProcessor  : public juce::AudioProcessor,
-                                   private juce::AudioProcessorValueTreeState::Listener
+class AnalogSynthAudioProcessor  : public juce::AudioProcessor
 {
 public:
     AnalogSynthAudioProcessor();
@@ -698,18 +697,15 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    // APVTS Listener
-    void parameterChanged (const juce::String& parameterID, float newValue) override;
-
     juce::AudioProcessorValueTreeState apvts;
 
 private:
     Synth synth;
     Oscillator testToneOsc;
     std::atomic<bool> testToneActive{false};
-    std::atomic<bool> paramsNeedUpdate{true};
+    float lastPolyphony = -1;
 
-    void updateSynthParams();
+    void updateSynthParamsIfNeeded();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessor)
 };
