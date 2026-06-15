@@ -100,11 +100,23 @@ enum class ModSource : int { None = 0, LFO1 = 1, LFO2 = 2, AmpEnv = 3, FiltEnv =
 enum class ModDest : int { None = 0, Osc1Pitch = 1, Osc2Pitch = 2, Osc3Pitch = 3, AllOscPitch = 4, Osc1Level = 5, Osc2Level = 6, Osc3Level = 7, FilterCutoff = 8, FilterResonance = 9, FilterDrive = 10, AmpLevel = 11, Pan = 12, LFO1Rate = 13, LFO2Rate = 14 };
 
 //==============================================================================
+// Fast thread-safe PRNG (xorshift32)
+class FastRandom
+{
+public:
+    explicit FastRandom(uint32_t seed = 1) : state(seed) {}
+    float nextFloat() { state ^= state << 13; state ^= state >> 17; state ^= state << 5; return static_cast<float>(state) * (1.0f / 4294967296.0f); }
+    float nextFloatBipolar() { return nextFloat() * 2.0f - 1.0f; }
+private:
+    uint32_t state;
+};
+
+//==============================================================================
 // Oscillator
 class Oscillator
 {
 public:
-    void prepare(double sampleRate) { sr = sampleRate; }
+    void prepare(double sampleRate) { sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 1000)); }
     void setWaveform(Waveform w) { waveform = w; }
     void setFrequency(float f) { baseFreq = f; updatePhaseInc(); }
     void setDetune(float cents) { detune = cents; updatePhaseInc(); }
@@ -149,7 +161,7 @@ public:
                     sample = (ph < pulseWidth * 2.0f * juce::MathConstants<float>::pi) ? 1.0f : -1.0f;
                     break;
                 case Waveform::Noise:
-                    sample = 2.0f * (static_cast<float>(std::rand()) / RAND_MAX) - 1.0f;
+                    sample = randGen.nextFloatBipolar();
                     break;
             }
 
@@ -194,6 +206,7 @@ private:
     float unisonSpread = 0;
     std::vector<float> unisonPhases;
     std::vector<float> unisonPhaseIncs;
+    FastRandom randGen;
 };
 
 //==============================================================================
@@ -254,7 +267,7 @@ class LFO
 public:
     enum class Waveform { Sine = 0, Triangle = 1, Saw = 2, Square = 3, SampleHold = 4 };
 
-    void prepare(double sampleRate) { sr = sampleRate; }
+    void prepare(double sampleRate) { sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 2000)); }
     void setWaveform(Waveform w) { waveform = w; }
     void setRate(float hz) { rate = hz; updatePhaseInc(); }
     void setDelay(float d) { delay = d; delaySamples = static_cast<int>(d * sr); }
@@ -280,7 +293,7 @@ public:
             case Waveform::Triangle: out = 2.0f * std::abs(phase / juce::MathConstants<float>::pi - std::floor(phase / juce::MathConstants<float>::pi + 0.5f)) - 1.0f; break;
             case Waveform::Saw: out = 2.0f * (phase / (2.0f * juce::MathConstants<float>::pi) - std::floor(0.5f + phase / (2.0f * juce::MathConstants<float>::pi))); break;
             case Waveform::Square: out = (phase < juce::MathConstants<float>::pi) ? 1.0f : -1.0f; break;
-            case Waveform::SampleHold: if (++shCounter >= shRate) { shCounter = 0; shValue = 2.0f * (static_cast<float>(std::rand()) / RAND_MAX) - 1.0f; } out = shValue; break;
+            case Waveform::SampleHold: if (++shCounter >= shRate) { shCounter = 0; shValue = randGen.nextFloatBipolar(); } out = shValue; break;
         }
 
         phase += phaseInc;
@@ -303,6 +316,7 @@ private:
     int delaySamples = 0, fadeSamples = 0, delayCounter = 0, fadeCounter = 0;
     int shCounter = 0, shRate = 44100;
     float shValue = 0;
+    FastRandom randGen;
 };
 
 //==============================================================================
@@ -534,6 +548,24 @@ public:
     {
         if (!isVoiceActive()) return;
 
+        // Calculate filter cutoff modulation once per block (not per sample!)
+        float modFilterCutoff = 0;
+        for (int m = 0; m < 8; ++m)
+        {
+            const auto& slot = modMatrix.getSlot(m);
+            if (!slot.enabled) continue;
+            if (slot.dest == ModDest::FilterCutoff)
+            {
+                float srcVal = getModSourceValue(slot.source, 0, 0, 0, 0, noteVel);
+                modFilterCutoff += modMatrix.getModValue(m, srcVal) * filterEnvAmount * 2400.0f; // cents
+            }
+        }
+        if (modFilterCutoff != 0)
+        {
+            float newCutoff = filterCutoffBase * std::pow(2.0f, modFilterCutoff / 1200.0f);
+            filter.setCutoff(newCutoff);
+        }
+
         for (int i = 0; i < numSamples; ++i)
         {
             // Modulation sources
@@ -541,22 +573,6 @@ public:
             float lfo2Val = lfo2.process();
             float ampEnvVal = ampEnv.process();
             float filtEnvVal = filtEnv.process();
-
-            // Apply mod matrix to filter cutoff
-            float modFilterCutoff = 0;
-            for (int m = 0; m < 8; ++m)
-            {
-                const auto& slot = modMatrix.getSlot(m);
-                if (!slot.enabled) continue;
-                float srcVal = getModSourceValue(slot.source, lfo1Val, lfo2Val, ampEnvVal, filtEnvVal, noteVel);
-                modFilterCutoff += modMatrix.getModValue(m, srcVal) * filterEnvAmount * 2400.0f; // cents
-            }
-
-            if (modFilterCutoff != 0)
-            {
-                float newCutoff = filterCutoffBase * std::pow(2.0f, modFilterCutoff / 1200.0f);
-                filter.setCutoff(newCutoff);
-            }
 
             // Generate oscillator signals
             float oscSum = 0;
