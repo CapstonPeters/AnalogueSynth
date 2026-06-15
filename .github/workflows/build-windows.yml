@@ -73,7 +73,29 @@ jobs:
           # Create plugin.xml if missing (JUCE sometimes doesn't generate it on Windows)
           $pluginXmlDst = Join-Path $x64Dir "plugin.xml"
           if (-not (Test-Path $pluginXmlDst)) {
-            $xml = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjxwbHVnaW4gdmVyc2lvbj0iMSIgeG1sbnM9Imh0dHA6Ly93d3cuc3RlaW5iZXJnLm5ldC92c3QzLzIwMDgvcGx1Z2luIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6c2NoZW1hTG9jYXRpb249Imh0dHA6Ly93d3cuc3RlaW5iZXJnLm5ldC92c3QzLzIwMDgvcGx1Z2luIHBsdWdpbi54c2QiPg0KICA8bmFtZT5BbmFsb2dTeW50aDwvbmFtZT4NCiAgPGRlc2NyaXB0aW9uPjMtb3NjaWxsYXRvciBhbmFsb2ctc3R5bGUgVlNUMiBzeW50aGVzaXplcjwvZGVzY3JpcHRpb24+DQogIDx2ZXJzaW9uPjEuMC4wPC92ZXJzaW9uPg0KICA8bWFudWZhY3R1cmVyPkFuYWxvZ1N5bnRoPC9tYW51ZmFjdHVyZXI+DQogIDx2ZW5kb3ItdXJsPjwvdmVuZG9yLXVybD4NCiAgPGZsYWdzPklzU3ludGg8L2ZsYWdzPg0KICA8Y2F0ZWdvcnk+SW5zdHJ1bWVudHxTeW50aDwvY2F0ZWdvcnk+DQogIDxjbGFzcyBuYW1lPSJBbmFsb2dTeW50aFZTVDMQdWRpbyByb3ZlciIgY2lkPSJ7RTNBOEYyQjEtNEM3RC00QTlFLTgCMy0gMUQyQzVFN0Y5QTBCIi8+DQogIDxjb21wb25lbnQgbmFtZT0iQW5hbG9nU3ludGhBdWRpblByb2Nlc3NvciIgY2lkPSJ7RTNBOEYyQjEtNEM3RC00QTlFLTgCMy0gMUQyQzVFN0Y5QTBCIj4NCiAgICA8YXVkaW8+DQogICAgICA8YnVzIG5hbWU9IlN0ZXJlbyBPdXQiIHR5cGU9IktNYWluIiBjaGFubmVsLWNvdW50PSIyIiBmbGFncz0ia091dHB1dCIvPg0KICAgIDwvYXVkaW8+DQogICAgPGV2ZW50Pg0KICAgICAgPGJ1cyBuYW1lPSJFdmVudCBJbiIgdHlwZT0iS01haW4iIGNoYW5uZWwtY291bnQ9IjE2IiBmbGFncz0ia0lucHV0Ii8+DQogICAgPC9ldmVudD4NCiAgICA8cHJlc2V0cy8+DQogIDwvY29tcG9uZW50Pg0KICA8Y29udHJvbGxlciBuYW1lPSJBbmFsb2dTeW50aENvbnRyb2xsZXIiIGNpZD0ie0UzQThGMkIxLTRDN0QtNEE5RS04QjNGLTFEMkM1RTdGOUEwQn0iPg0KICAgIDxwcmVzZXRzLz4NCiAgPC9jb250cm9sbGVyPg0KPC9wbHVnaW4+DQo="))
+            $xml = '<?xml version="1.0" encoding="UTF-8"?>' + "`n" +
+            '<plugin version="1" xmlns="http://www.steinberg.net/vst3/2008/plugin" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.steinberg.net/vst3/2008/plugin plugin.xsd">' + "`n" +
+            '  <name>AnalogSynth</name>' + "`n" +
+            '  <description>3-oscillator analog-style VST3 synthesizer</description>' + "`n" +
+            '  <version>1.0.0</version>' + "`n" +
+            '  <manufacturer>AnalogSynth</manufacturer>' + "`n" +
+            '  <vendor-url></vendor-url>' + "`n" +
+            '  <flags>IsSynth</flags>' + "`n" +
+            '  <category>Instrument|Synth</category>' + "`n" +
+            '  <class name="AnalogSynthVST3AudioProcessor" cid="{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}"/>' + "`n" +
+            '  <component name="AnalogSynthAudioProcessor" cid="{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}">' + "`n" +
+            '    <audio>' + "`n" +
+            '      <bus name="Stereo Out" type="kMain" channel-count="2" flags="kOutput"/>' + "`n" +
+            '    </audio>' + "`n" +
+            '    <event>' + "`n" +
+            '      <bus name="Event In" type="kMain" channel-count="16" flags="kInput"/>' + "`n" +
+            '    </event>' + "`n" +
+            '    <presets/>' + "`n" +
+            '  </component>' + "`n" +
+            '  <controller name="AnalogSynthController" cid="{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}">' + "`n" +
+            '    <presets/>' + "`n" +
+            '  </controller>' + "`n" +
+            '</plugin>'
             Set-Content -Path $pluginXmlDst -Value $xml -Encoding UTF8
             Write-Host "Created plugin.xml in x86_64-win/"
           } else {
