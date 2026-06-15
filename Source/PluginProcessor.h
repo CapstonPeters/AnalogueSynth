@@ -224,11 +224,19 @@ public:
         sustain = juce::jlimit(0.0f, 1.0f, s);
         release = juce::jmax(0.001f, r);
     }
-    void noteOn() { stage = Stage::Attack; level = 0.0f; }
+    void noteOn() { stage = Stage::Attack; level = 0.0f; samplesSinceNoteOn = 0; }
     void noteOff() { if (stage != Stage::Idle) stage = Stage::Release; }
     bool isActive() const { return stage != Stage::Idle; }
     float process()
     {
+        samplesSinceNoteOn++;
+        // Safety: force release after 30 seconds max to prevent stuck voices
+        if (samplesSinceNoteOn > static_cast<int>(sr * 30.0))
+        {
+            if (stage != Stage::Idle && stage != Stage::Release)
+                stage = Stage::Release;
+        }
+
         switch (stage)
         {
             case Stage::Attack:
@@ -243,7 +251,7 @@ public:
                 break;
             case Stage::Release:
                 level -= sustain / (release * sr);
-                if (level <= 0.0f) { level = 0.0f; stage = Stage::Idle; }
+                if (level <= 0.0001f) { level = 0.0f; stage = Stage::Idle; }
                 break;
             case Stage::Idle:
                 break;
@@ -258,6 +266,7 @@ private:
     Stage stage = Stage::Idle;
     float level = 0.0f;
     float attack = 0.01f, decay = 0.1f, sustain = 0.7f, release = 0.2f;
+    int samplesSinceNoteOn = 0; // For safety timeout
 };
 
 //==============================================================================
@@ -598,6 +607,10 @@ public:
         }
 
         if (!ampEnv.isActive() && !filtEnv.isActive())
+            clearCurrentNote();
+
+        // Safety: force clear voice if it's been active too long (prevents stuck notes)
+        if (ampEnv.samplesSinceNoteOn > static_cast<int>(sr * 35.0))
             clearCurrentNote();
     }
 
