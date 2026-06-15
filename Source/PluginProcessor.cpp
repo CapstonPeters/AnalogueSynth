@@ -111,8 +111,6 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
     synth.addSound(new SimpleSynthSound());
 }
 
-AnalogSynthAudioProcessor::~AnalogSynthAudioProcessor() = default;
-
 void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
 {
     float poly = apvts.getRawParameterValue(ParamID::polyphony)->load();
