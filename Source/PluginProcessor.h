@@ -116,7 +116,7 @@ private:
 class Oscillator
 {
 public:
-    void prepare(double sampleRate) { sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 1000)); }
+    void prepare(double sampleRate) { DBG("Oscillator::prepare sr=" << sampleRate); sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 1000)); DBG("Oscillator::prepare done"); }
     void setWaveform(Waveform w) { waveform = w; }
     void setFrequency(float f) { baseFreq = f; updatePhaseInc(); }
     void setDetune(float cents) { detune = cents; updatePhaseInc(); }
@@ -216,7 +216,7 @@ class EnvelopeADSR
 public:
     enum class Stage { Idle, Attack, Decay, Sustain, Release };
 
-    void prepare(double sampleRate) { sr = sampleRate; }
+    void prepare(double sampleRate) { DBG("EnvelopeADSR::prepare sr=" << sampleRate); sr = sampleRate; DBG("EnvelopeADSR::prepare done"); }
     void setParams(float a, float d, float s, float r)
     {
         attack  = juce::jmax(0.001f, a);
@@ -278,7 +278,7 @@ class LFO
 public:
     enum class Waveform { Sine = 0, Triangle = 1, Saw = 2, Square = 3, SampleHold = 4 };
 
-    void prepare(double sampleRate) { sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 2000)); }
+    void prepare(double sampleRate) { DBG("LFO::prepare sr=" << sampleRate); sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 2000)); DBG("LFO::prepare done"); }
     void setWaveform(Waveform w) { waveform = w; }
     void setRate(float hz) { rate = hz; updatePhaseInc(); }
     void setDelay(float d) { delay = d; delaySamples = static_cast<int>(d * sr); }
@@ -335,7 +335,7 @@ private:
 class Filter
 {
 public:
-    void prepare(double sampleRate) { sr = sampleRate; }
+    void prepare(double sampleRate) { DBG("Filter::prepare sr=" << sampleRate); sr = sampleRate; DBG("Filter::prepare done"); }
     void setType(FilterType t) { type = t; }
     void setCutoff(float c) { cutoff = juce::jlimit(20.0f, 20000.0f, c); updateCoeffs(); }
     void setResonance(float r) { resonance = juce::jlimit(0.0f, 1.0f, r); updateCoeffs(); }
@@ -423,8 +423,12 @@ private:
 class SynthVoice : public juce::SynthesiserVoice
 {
 public:
+    SynthVoice() { DBG("SynthVoice: Constructor"); }
+    ~SynthVoice() override { DBG("SynthVoice: Destructor"); }
+
     void prepare(double sampleRate)
     {
+        DBG("SynthVoice::prepare sr=" << sampleRate);
         sr = sampleRate;
         for (auto& o : oscillators) o.prepare(sampleRate);
         for (auto& o : subOscillators) o.prepare(sampleRate);
@@ -434,6 +438,7 @@ public:
         lfo1.prepare(sampleRate);
         lfo2.prepare(sampleRate);
         filter.prepare(sampleRate);
+        DBG("SynthVoice::prepare done");
     }
 
     void setParams(const juce::AudioProcessorValueTreeState& apvts)
