@@ -338,11 +338,11 @@ public:
     void prepare(double sampleRate) { DBG("Filter::prepare sr=" << sampleRate); sr = sampleRate; DBG("Filter::prepare done"); }
     void setType(FilterType t) { type = t; }
     void setCutoff(float c) { cutoff = juce::jlimit(20.0f, 20000.0f, c); updateCoeffs(); }
-    void setResonance(float r) { resonance = juce::jlimit(0.0f, 1.0f, r); updateCoeffs(); }
+    void setResonance(float r) { resonance = juce::jlimit(0.0f, 0.9f, r); updateCoeffs(); }
     void setDrive(float d) { drive = juce::jlimit(0.0f, 10.0f, d); }
     void setKeyTrack(float k) { keyTrack = k; }
-    void noteOn() { for (auto& s : states) s = 0; }
-    float process(float input)
+    void noteOn() { statesL.fill(0); statesR.fill(0); }
+    float process(float input, std::array<float, 4>& states)
     {
         float x = input * (1.0f + drive * 0.1f); // light saturation
 
@@ -355,11 +355,10 @@ public:
         }
         return x;
     }
-    float processStereo(float& left, float& right)
+    void processStereo(float& left, float& right)
     {
-        left  = process(left);
-        right = process(right);
-        return 0;
+        left  = process(left, statesL);
+        right = process(right, statesR);
     }
 
 private:
@@ -378,7 +377,8 @@ public:
     float drive = 0;
     float keyTrack = 0;
     float coeff = 0;
-    std::array<float, 4> states = {0, 0, 0, 0};
+    std::array<float, 4> statesL = {0, 0, 0, 0};
+    std::array<float, 4> statesR = {0, 0, 0, 0};
 };
 
 //==============================================================================
@@ -566,6 +566,8 @@ public:
     {
         if (!isVoiceActive()) return;
 
+        DBG("renderNextBlock: voice=" << note << " samples=" << numSamples << " active=" << isVoiceActive());
+
         // Calculate filter cutoff modulation once per block (not per sample!)
         float modFilterCutoff = 0;
         for (int m = 0; m < 8; ++m)
@@ -621,7 +623,7 @@ public:
             // Safety: check for NaN/Inf BEFORE filter
             if (!std::isfinite(signal)) { signal = 0; clearCurrentNote(); return; }
 
-            // Filter (process stereo properly)
+            // Filter (process stereo properly) - resonance already limited to 0.9 in setResonance
             float left = signal;
             float right = signal;
             filter.processStereo(left, right);
@@ -640,6 +642,8 @@ public:
         // Safety: force clear voice if it's been active too long (prevents stuck notes)
         if (ampEnv.samplesSinceNoteOn > static_cast<int>(sr * 35.0))
             clearCurrentNote();
+        
+        DBG("renderNextBlock: done");
     }
 
 private:
