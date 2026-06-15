@@ -509,6 +509,7 @@ public:
     {
         note = midiNoteNumber;
         noteVel = velocity;
+        samplesSinceNoteOn = 0; // Reset timeout counter
         float freq = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
 
         // Oscillators
@@ -579,6 +580,15 @@ public:
 
         for (int i = 0; i < numSamples; ++i)
         {
+            samplesSinceNoteOn++;
+            
+            // Safety: force clear if voice active too long (35 seconds max at 48kHz)
+            if (samplesSinceNoteOn > static_cast<int>(sr * 35.0))
+            {
+                clearCurrentNote();
+                return;
+            }
+
             // Modulation sources
             float lfo1Val = lfo1.process();
             float lfo2Val = lfo2.process();
@@ -598,10 +608,17 @@ public:
 
             float signal = (oscSum + sub + noise) * ampEnvVal;
 
-            // Filter (process stereo properly)
+            // Safety: check for NaN/Inf
+            if (!std::isfinite(signal)) { signal = 0; clearCurrentNote(); return; }
+
+            // Filter (process stereo properly) - limit resonance for stability
+            if (filter.resonance > 0.95f) filter.resonance = 0.95f;
             float left = signal;
             float right = signal;
             filter.processStereo(left, right);
+
+            // Safety: check for NaN/Inf after filter
+            if (!std::isfinite(left) || !std::isfinite(right)) { clearCurrentNote(); return; }
 
             // Output
             if (outputBuffer.getNumChannels() > 0) outputBuffer.addSample(0, startSample + i, left);
@@ -648,6 +665,9 @@ private:
     float noiseLevel = 0, subLevel = 0;
     float filterCutoffBase = 10000;
     float filterKeyTrack = 0, filterVelTrack = 0, filterEnvAmount = 0;
+
+public:
+    int samplesSinceNoteOn = 0; // For safety timeout
 };
 
 //==============================================================================
