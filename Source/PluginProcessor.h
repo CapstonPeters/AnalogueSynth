@@ -266,6 +266,8 @@ private:
     Stage stage = Stage::Idle;
     float level = 0.0f;
     float attack = 0.01f, decay = 0.1f, sustain = 0.7f, release = 0.2f;
+
+public:
     int samplesSinceNoteOn = 0; // For safety timeout
 };
 
