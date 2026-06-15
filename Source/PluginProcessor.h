@@ -370,6 +370,7 @@ private:
         coeff = 2.0f * std::sin(juce::MathConstants<float>::pi * fc);
     }
 
+public:
     double sr = 44100;
     FilterType type = FilterType::LP24;
     float cutoff = 10000;
