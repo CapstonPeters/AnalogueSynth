@@ -109,6 +109,14 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
         synth.addVoice(new SynthVoice());
 
     synth.addSound(new SimpleSynthSound());
+
+    // Listen for parameter changes
+    apvts.addParameterListener(nullptr, this);
+}
+
+AnalogSynthAudioProcessor::~AnalogSynthAudioProcessor()
+{
+    apvts.removeParameterListener(nullptr, this);
 }
 
 void AnalogSynthAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)

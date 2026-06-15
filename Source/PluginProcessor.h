@@ -662,7 +662,8 @@ public:
 };
 
 //==============================================================================
-class AnalogSynthAudioProcessor  : public juce::AudioProcessor
+class AnalogSynthAudioProcessor  : public juce::AudioProcessor,
+                                   private juce::AudioProcessorValueTreeState::Listener
 {
 public:
     AnalogSynthAudioProcessor();
@@ -697,7 +698,7 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    // Parameter change callback
+    // APVTS Listener
     void parameterChanged (const juce::String& parameterID, float newValue) override;
 
     juce::AudioProcessorValueTreeState apvts;
