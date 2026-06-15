@@ -111,6 +111,20 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
     synth.addSound(new SimpleSynthSound());
 }
 
+void AnalogSynthAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    // Mark that synth params need updating on next audio block
+    paramsNeedUpdate.store(true);
+}
+
+void AnalogSynthAudioProcessor::updateSynthParams()
+{
+    if (paramsNeedUpdate.exchange(false))
+    {
+        synth.setParams(apvts);
+    }
+}
+
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     synth.setCurrentPlaybackSampleRate(sampleRate);
@@ -120,6 +134,10 @@ void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 
     testToneOsc.prepare(sampleRate);
     testToneOsc.setFrequency(440.0f);
+    
+    // Initial param sync
+    paramsNeedUpdate.store(true);
+    updateSynthParams();
 }
 
 void AnalogSynthAudioProcessor::releaseResources() {}
@@ -134,8 +152,8 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
 
-    // Update synth params from APVTS (could be optimized with change callbacks)
-    synth.setParams(apvts);
+    // Update synth params only when changed (not every block!)
+    updateSynthParams();
 
     // Update polyphony
     int targetPoly = apvts.getRawParameterValue(ParamID::polyphony)->load();

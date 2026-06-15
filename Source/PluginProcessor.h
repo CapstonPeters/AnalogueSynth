@@ -587,12 +587,14 @@ public:
 
             float signal = (oscSum + sub + noise) * ampEnvVal;
 
-            // Filter
-            filter.processStereo(signal, signal);
+            // Filter (process stereo properly)
+            float left = signal;
+            float right = signal;
+            filter.processStereo(left, right);
 
             // Output
-            for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
-                outputBuffer.addSample(ch, startSample + i, signal);
+            if (outputBuffer.getNumChannels() > 0) outputBuffer.addSample(0, startSample + i, left);
+            if (outputBuffer.getNumChannels() > 1) outputBuffer.addSample(1, startSample + i, right);
         }
 
         if (!ampEnv.isActive() && !filtEnv.isActive())
@@ -695,12 +697,18 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    // Parameter change callback
+    void parameterChanged (const juce::String& parameterID, float newValue) override;
+
     juce::AudioProcessorValueTreeState apvts;
 
 private:
     Synth synth;
     Oscillator testToneOsc;
     std::atomic<bool> testToneActive{false};
+    std::atomic<bool> paramsNeedUpdate{true};
+
+    void updateSynthParams();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessor)
 };
