@@ -60,14 +60,15 @@ jobs:
           $x64Dir = Join-Path $contentsDir "x86_64-win"
           $resourcesDir = Join-Path $contentsDir "Resources"
           
-          # Generate moduleinfo.json with CORRECT CID
+          # Generate moduleinfo.json with CORRECT CID directly (no base64 corruption)
           $moduleInfoDst = Join-Path $x64Dir "moduleinfo.json"
-          # Fresh base64 with correct CID: {E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}
-          $moduleInfoJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("ewogICJOYW1lIjogIkFuYWxvZ1N5bnRoIiwKICAiVmVyc2lvbiI6ICIxLjAuMCIsCiAgIkZhY3RvcnkgSW5mbyI6IHsKICAgICJWZW5kb3IiOiAiQW5hbG9nU3ludGgiLAogICAgIlVSTCI6ICIiLAogICAgIkUtTWFpbCI6ICIiLAogICAgIkZsYWdzIjogewogICAgICAiVW5pY29kZSI6IHRydWUsCiAgICAgICJDbGFzc2VzIERpc2NhcmRhYmxlIjogZmFsc2UsCiAgICAgICJDb21wb25lbnQgTm9uIERpc2NhcmRhYmxlIjogZmFsc2UKICAgIH0KICB9LAogICJDbGFzc2VzIjogWwogICAgewogICAgICAiQ0lEIjogIntFM0E4RjJCMS00QzdELTQ5OUUtOEIzRi0xRDJDNUU3RjlBMUIiLAogICAgICAiQ2F0ZWdvcnkiOiAiQXVkaW8gTW9kdWxlIENsYXNzIiwKICAgICAgIk5hbWUiOiAiQW5hbG9nU3ludGgiLAogICAgICAiVmVuZG9yIjogIkFuYWxvZ1N5bnRoIiwKICAgICAgIlZlcnNpb24iOiAiMS4wLjAiLAogICAgICAiU0RLVmVyc2lvbiI6ICJWU1QgMy43LjExIiwKICAgICAgIlN1YiBDYXRlZ29yaWVzIjogWwogICAgICAgICJJbnN0cnVtZW50IiwKICAgICAgICAiSW5zdHJ1bWVudCIsCiAgICAgICAgIlN5bnRoIgogICAgICBdLAogICAgICAiQ2xhc3MgRmxhZ3MiOiAyLAogICAgICAiQ2FyZGluYWxpdHkiOiAyMTQ3NDgzNjQ3LAogICAgICAiU25hcHNob3RzIjogW10KICAgIH0sCiAgICB7CiAgICAgICJDSUQiOiAie0UzQThGMkIxLTRDN0QtNEE5RS04QjNGLTFEMkM1RTdGOUEwQn0iLAogICAgICAiQ2F0ZWdvcnkiOiAiQ29tcG9uZW50IENvbnRyb2xsZXIgQ2xhc3MiLAogICAgICAiTmFtZSI6ICJBbmFsb2dTeW50aCIsCiAgICAgICJWZW5kb3IiOiAiQW5hbG9nU3ludGgiLAogICAgICAiVmVyc2lvbiI6ICIxLjAuMCIsCiAgICAgICJTRktWZXJzaW9uIjogIlZTVCAzLjcuMTEiLAogICAgICAiU3ViIENhdGVnb3JpZXMiOiBbCiAgICAgICAgIkluc3RydW1lbnQiLAogICAgICAgICJJbnN0cnVtZW50IiwKICAgICAgICAiU3ludGgiCiAgICAgIF0sCiAgICAgICJDbGFzcyBGbGFncyI6IDIsCiAgICAgICJDYXJkaW5hbGl0eSI6IDIxNDc0ODM2NDcsCiAgICAgICJTbmFwc2hvdHMiOiBbXQogICAgfSwKICAgIHsKICAgICAgIkNJRCI6ICJ7RTNBOEYyQjEtNEM3RC00QTlFLTgCMy0gMUQyQzVFN0Y5QTBCIiwKICAgICAgIkNhdGVnb3J5IjogIlBsdWdpbiBDb21wYXRpYmlsaXR5IENsYXNzIiwKICAgICAgIk5hbWUiOiAiQW5hbG9nU3ludGgiLAogICAgICAiVmVuZG9yIjogIkFuYWxvZ1N5bnRoIiwKICAgICAgIlZlcnNpb24iOiAiMS4wLjAiLAogICAgICAiU0RLVmVyc2lvbiI6ICJWU1QgMy43LjExIiwKICAgICAgIkNsYXNzIEZsYWdzIjogMCwKICAgICAgIkNhcmRpbmFsaXR5IjogMjE0NzQ4MzY0NywKICAgICAgIlNuYXBzaG90cyI6IFtdCiAgICB9CiAgIF0KfQo="))
+          
+          $moduleInfoJson = '{"Name":"AnalogSynth","Version":"1.0.0","Factory Info":{"Vendor":"AnalogSynth","URL":"","E-Mail":"","Flags":{"Unicode":true,"Classes Discardable":false,"Component Non Discardable":false}},"Classes":[{"CID":"{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}","Category":"Audio Module Class","Name":"AnalogSynth","Vendor":"AnalogSynth","Version":"1.0.0","SDKVersion":"VST 3.7.11","Sub Categories":["Instrument","Instrument","Synth"],"Class Flags":2,"Cardinality":2147483647,"Snapshots":[]},{"CID":"{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}","Category":"Component Controller Class","Name":"AnalogSynth","Vendor":"AnalogSynth","Version":"1.0.0","SDKVersion":"VST 3.7.11","Sub Categories":["Instrument","Instrument","Synth"],"Class Flags":2,"Cardinality":2147483647,"Snapshots":[]},{"CID":"{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}","Category":"Plugin Compatibility Class","Name":"AnalogSynth","Vendor":"AnalogSynth","Version":"1.0.0","SDKVersion":"VST 3.7.11","Class Flags":0,"Cardinality":2147483647,"Snapshots":[]}]}'
+          
           Set-Content -Path $moduleInfoDst -Value $moduleInfoJson -Encoding UTF8
           Write-Host "Generated moduleinfo.json with correct CID in x86_64-win/"
           
-          # Create plugin.xml if missing
+          # Create plugin.xml if missing (JUCE sometimes doesn't generate it on Windows)
           $pluginXmlDst = Join-Path $x64Dir "plugin.xml"
           if (-not (Test-Path $pluginXmlDst)) {
             $xml = '<?xml version="1.0" encoding="UTF-8"?>' + "`n" +
