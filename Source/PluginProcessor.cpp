@@ -104,11 +104,13 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true))
     , apvts (*this, nullptr, "PARAMETERS", createParameterLayout())
 {
+    DBG("AnalogSynthAudioProcessor: Constructor start");
     // Initialize 16 voices max
     for (int i = 0; i < 16; ++i)
         synth.addVoice(new SynthVoice());
 
     synth.addSound(new SimpleSynthSound());
+    DBG("AnalogSynthAudioProcessor: Constructor done, voices=" << synth.getVoicesArray().size());
 }
 
 void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
@@ -123,6 +125,7 @@ void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    DBG("prepareToPlay: sr=" << sampleRate << " block=" << samplesPerBlock);
     synth.setCurrentPlaybackSampleRate(sampleRate);
     for (auto* v : synth.getVoicesArray())
         if (auto* sv = dynamic_cast<SynthVoice*>(v))
@@ -133,6 +136,7 @@ void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     
     // Initial param sync
     updateSynthParamsIfNeeded();
+    DBG("prepareToPlay: done");
 }
 
 void AnalogSynthAudioProcessor::releaseResources() {}
@@ -150,6 +154,14 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     processBlockCount++;
     int totalSamplesThisBlock = buffer.getNumSamples();
     maxProcessBlockSamples = juce::jmax(maxProcessBlockSamples, totalSamplesThisBlock);
+    
+    // Log first few blocks
+    if (processBlockCount <= 3)
+    {
+        DBG("processBlock #" << processBlockCount << ": samples=" << totalSamplesThisBlock 
+            << " channels=" << buffer.getNumChannels() 
+            << " midiEvents=" << midiMessages.getNumEvents());
+    }
     
     // Safety: if we've processed too many blocks without audio output, reset
     if (processBlockCount > 100000) processBlockCount = 0;
