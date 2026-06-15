@@ -145,14 +145,19 @@ bool AnalogSynthAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
+    static int processBlockCount = 0;
+    static int maxProcessBlockSamples = 0;
+    processBlockCount++;
+    int totalSamplesThisBlock = buffer.getNumSamples();
+    maxProcessBlockSamples = juce::jmax(maxProcessBlockSamples, totalSamplesThisBlock);
+    
+    // Safety: if we've processed too many blocks without audio output, reset
+    if (processBlockCount > 100000) processBlockCount = 0;
+
     buffer.clear();
 
     // Update synth params only when polyphony changes
     updateSynthParamsIfNeeded();
-
-    // Update polyphony
-    int targetPoly = apvts.getRawParameterValue(ParamID::polyphony)->load();
-    // (Synthesiser handles voice stealing automatically)
 
     // Process MIDI
     for (const auto metadata : midiMessages)
@@ -171,6 +176,16 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Render
     juce::MidiBuffer midiCopy = midiMessages;
     synth.renderNextBlock(buffer, midiCopy, 0, buffer.getNumSamples());
+
+    // Safety: check output for NaN/Inf
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+    {
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            float sample = buffer.getSample(ch, i);
+            if (!std::isfinite(sample)) { buffer.setSample(ch, i, 0.0f); }
+        }
+    }
 
     // Test tone (for debugging)
     if (testToneActive.load())

@@ -583,8 +583,8 @@ public:
         {
             samplesSinceNoteOn++;
             
-            // Safety: force clear if voice active too long (35 seconds max at 48kHz)
-            if (samplesSinceNoteOn > static_cast<int>(sr * 35.0))
+            // Safety: force clear if voice active too long (15 seconds max at 48kHz = 720000 samples)
+            if (samplesSinceNoteOn > static_cast<int>(sr * 15.0))
             {
                 clearCurrentNote();
                 return;
@@ -609,13 +609,14 @@ public:
 
             float signal = (oscSum + sub + noise) * ampEnvVal;
 
-            // Safety: check for NaN/Inf
+            // Safety: check for NaN/Inf BEFORE filter
             if (!std::isfinite(signal)) { signal = 0; clearCurrentNote(); return; }
 
-            // Filter (process stereo properly) - limit resonance for stability
-            if (filter.resonance > 0.95f) filter.resonance = 0.95f;
+            // Filter (process stereo properly) - aggressive resonance limit for stability
+            float safeRes = juce::jmin(filter.resonance, 0.9f);
             float left = signal;
             float right = signal;
+            filter.setResonance(safeRes);
             filter.processStereo(left, right);
 
             // Safety: check for NaN/Inf after filter
