@@ -579,6 +579,10 @@ public:
             filter.setCutoff(newCutoff);
         }
 
+        // Per-block resonance limit (not per-sample!)
+        float safeRes = juce::jmin(filter.resonance, 0.9f);
+        filter.setResonance(safeRes);
+
         for (int i = 0; i < numSamples; ++i)
         {
             samplesSinceNoteOn++;
@@ -612,11 +616,9 @@ public:
             // Safety: check for NaN/Inf BEFORE filter
             if (!std::isfinite(signal)) { signal = 0; clearCurrentNote(); return; }
 
-            // Filter (process stereo properly) - aggressive resonance limit for stability
-            float safeRes = juce::jmin(filter.resonance, 0.9f);
+            // Filter (process stereo properly)
             float left = signal;
             float right = signal;
-            filter.setResonance(safeRes);
             filter.processStereo(left, right);
 
             // Safety: check for NaN/Inf after filter
