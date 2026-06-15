@@ -54,37 +54,48 @@ jobs:
           $parentDir = Split-Path $vst3Dir
           Write-Host "Found VST3 at: $vst3Dir"
           
-          # DEBUG: Show full VST3 bundle structure
-          Write-Host "=== FULL VST3 TREE ==="
+          # FIX: JUCE on Windows puts plugin.xml and moduleinfo.json in Contents/Resources/
+          # Bitwig expects them in Contents/x86_64-win/ - copy them to correct location
+          $contentsDir = Join-Path $vst3Dir "Contents"
+          $x64Dir = Join-Path $contentsDir "x86_64-win"
+          $resourcesDir = Join-Path $contentsDir "Resources"
+          
+          # Copy moduleinfo.json from Resources to x86_64-win
+          $moduleInfoSrc = Join-Path $resourcesDir "moduleinfo.json"
+          $moduleInfoDst = Join-Path $x64Dir "moduleinfo.json"
+          if (Test-Path $moduleInfoSrc) {
+            Copy-Item -Path $moduleInfoSrc -Destination $moduleInfoDst -Force
+            Write-Host "Copied moduleinfo.json to x86_64-win/"
+          } else {
+            Write-Warning "moduleinfo.json NOT FOUND in Resources/"
+          }
+          
+          # Create plugin.xml if missing (JUCE sometimes doesn't generate it on Windows)
+          $pluginXmlDst = Join-Path $x64Dir "plugin.xml"
+          if (-not (Test-Path $pluginXmlDst)) {
+            $xml = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjxwbHVnaW4gdmVyc2lvbj0iMSIgeG1sbnM9Imh0dHA6Ly93d3cuc3RlaW5iZXJnLm5ldC92c3QzLzIwMDgvcGx1Z2luIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6c2NoZW1hTG9jYXRpb249Imh0dHA6Ly93d3cuc3RlaW5iZXJnLm5ldC92c3QzLzIwMDgvcGx1Z2luIHBsdWdpbi54c2QiPg0KICA8bmFtZT5BbmFsb2dTeW50aDwvbmFtZT4NCiAgPGRlc2NyaXB0aW9uPjMtb3NjaWxsYXRvciBhbmFsb2ctc3R5bGUgVlNUMiBzeW50aGVzaXplcjwvZGVzY3JpcHRpb24+DQogIDx2ZXJzaW9uPjEuMC4wPC92ZXJzaW9uPg0KICA8bWFudWZhY3R1cmVyPkFuYWxvZ1N5bnRoPC9tYW51ZmFjdHVyZXI+DQogIDx2ZW5kb3ItdXJsPjwvdmVuZG9yLXVybD4NCiAgPGZsYWdzPklzU3ludGg8L2ZsYWdzPg0KICA8Y2F0ZWdvcnk+SW5zdHJ1bWVudHxTeW50aDwvY2F0ZWdvcnk+DQogIDxjbGFzcyBuYW1lPSJBbmFsb2dTeW50aFZTVDMQdWRpbyByb3ZlciIgY2lkPSJ7RTNBOEYyQjEtNEM3RC00QTlFLTgCMy0gMUQyQzVFN0Y5QTBCIi8+DQogIDxjb21wb25lbnQgbmFtZT0iQW5hbG9nU3ludGhBdWRpblByb2Nlc3NvciIgY2lkPSJ7RTNBOEYyQjEtNEM3RC00QTlFLTgCMy0gMUQyQzVFN0Y5QTBCIj4NCiAgICA8YXVkaW8+DQogICAgICA8YnVzIG5hbWU9IlN0ZXJlbyBPdXQiIHR5cGU9IktNYWluIiBjaGFubmVsLWNvdW50PSIyIiBmbGFncz0ia091dHB1dCIvPg0KICAgIDwvYXVkaW8+DQogICAgPGV2ZW50Pg0KICAgICAgPGJ1cyBuYW1lPSJFdmVudCBJbiIgdHlwZT0iS01haW4iIGNoYW5uZWwtY291bnQ9IjE2IiBmbGFncz0ia0lucHV0Ii8+DQogICAgPC9ldmVudD4NCiAgICA8cHJlc2V0cy8+DQogIDwvY29tcG9uZW50Pg0KICA8Y29udHJvbGxlciBuYW1lPSJBbmFsb2dTeW50aENvbnRyb2xsZXIiIGNpZD0ie0UzQThGMkIxLTRDN0QtNEE5RS04QjNGLTFEMkM1RTdGOUEwQn0iPg0KICAgIDxwcmVzZXRzLz4NCiAgPC9jb250cm9sbGVyPg0KPC9wbHVnaW4+DQo="))
+            Set-Content -Path $pluginXmlDst -Value $xml -Encoding UTF8
+            Write-Host "Created plugin.xml in x86_64-win/"
+          } else {
+            Write-Host "plugin.xml already exists in x86_64-win/"
+          }
+          
+          # DEBUG: Show final VST3 bundle structure
+          Write-Host "=== FINAL VST3 TREE ==="
           Get-ChildItem -Path "$vst3Dir" -Recurse | Select-Object FullName, Length
           
-          # DEBUG: Check plugin.xml
-          Write-Host "=== plugin.xml CONTENTS ==="
-          $pluginXml = "$vst3Dir\Contents\x86_64-win\plugin.xml"
-          if (Test-Path $pluginXml) {
-            Get-Content $pluginXml
-          } else {
-            Write-Warning "plugin.xml NOT FOUND at $pluginXml"
-            # Check other locations
-            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "plugin.xml" | Select-Object FullName
-          }
+          # DEBUG: Verify plugin.xml and moduleinfo.json in correct location
+          Write-Host "=== plugin.xml CONTENTS (x86_64-win) ==="
+          if (Test-Path $pluginXmlDst) { Get-Content $pluginXmlDst } else { Write-Warning "plugin.xml NOT FOUND in x86_64-win!" }
           
-          # DEBUG: Check moduleinfo.json
-          Write-Host "=== moduleinfo.json CONTENTS ==="
-          $moduleInfo = "$vst3Dir\Contents\x86_64-win\moduleinfo.json"
-          if (Test-Path $moduleInfo) {
-            Get-Content $moduleInfo
-          } else {
-            Write-Warning "moduleinfo.json NOT FOUND at $moduleInfo"
-            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "moduleinfo.json" | Select-Object FullName
-          }
+          Write-Host "=== moduleinfo.json CONTENTS (x86_64-win) ==="
+          if (Test-Path $moduleInfoDst) { Get-Content $moduleInfoDst } else { Write-Warning "moduleinfo.json NOT FOUND in x86_64-win!" }
           
-          $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
+          $dll = Get-ChildItem -Path "$x64Dir" -Filter "*.vst3" -ErrorAction SilentlyContinue
           if ($dll) {
             Write-Host "Found plugin DLL: $($dll.FullName)"
           } else {
-            Write-Warning "No DLL found in x86_64-win, checking all Contents..."
-            Get-ChildItem -Path "$vst3Dir\Contents" -Recurse -Filter "*.vst3" -ErrorAction SilentlyContinue | Select-Object FullName
+            Write-Warning "No DLL found in x86_64-win!"
           }
           
           $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
