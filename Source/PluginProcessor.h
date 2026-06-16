@@ -12,6 +12,7 @@
 #include <array>
 #include <fstream>
 #include <mutex>
+#include <sstream>
 
 //==============================================================================
 // File logging for debugging (since Bitwig Debug Log is unreliable)
@@ -46,10 +47,11 @@ public:
         }
     }
     
+    // Variadic template for printf-style logging
     template<typename... Args>
     void logf(const char* format, Args... args)
     {
-        char buffer[1024];
+        char buffer[2048];
         std::snprintf(buffer, sizeof(buffer), format, args...);
         log(juce::String(buffer));
     }
@@ -61,7 +63,13 @@ private:
     std::mutex mutex;
 };
 
-#define FLOG(msg) FileLogger::getInstance().log(msg)
+// Stream-like logging macro (converts to string via stringstream)
+#define FLOG(msg) do { \
+    std::ostringstream _flog_ss; \
+    _flog_ss << msg; \
+    FileLogger::getInstance().log(_flog_ss.str()); \
+} while(0)
+
 #define FLOG_FMT(fmt, ...) FileLogger::getInstance().logf(fmt, ##__VA_ARGS__)
 
 //==============================================================================
