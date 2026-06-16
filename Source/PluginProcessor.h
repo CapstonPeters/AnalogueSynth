@@ -10,51 +10,9 @@
 #include <cmath>
 #include <atomic>
 #include <array>
-#include <fstream>
-#include <mutex>
-
 //==============================================================================
-// File logging for debugging (enabled in both Debug and Release for Windows crash tracing)
-class FileLogger
-{
-public:
-    static FileLogger& getInstance()
-    {
-        static FileLogger instance;
-        return instance;
-    }
-    
-    void log(const char* message)
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        if (!file.is_open())
-        {
-            juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-                .getChildFile("AnalogSynth_DebugLog.txt");
-            file.open(logFile.getFullPathName().toStdString(), std::ios::out | std::ios::app);
-            if (file.is_open())
-            {
-                auto now = std::chrono::system_clock::now();
-                auto time = std::chrono::system_clock::to_time_t(now);
-                file << "=== AnalogSynth Debug Log Started: " << std::ctime(&time);
-            }
-        }
-        if (file.is_open())
-        {
-            file << message << "\n";
-            file.flush();
-        }
-    }
-
-private:
-    FileLogger() = default;
-    ~FileLogger() { if (file.is_open()) file.close(); }
-    std::ofstream file;
-    std::mutex mutex;
-};
-
-#define FLOG(msg) FileLogger::getInstance().log(msg)
-//==============================================================================
+// Simple logging - empty macro for Release builds to ensure Windows compilation
+#define FLOG(msg) do { } while(0)
 // Parameter IDs (string constants for APVTS)
 struct ParamID
 {
