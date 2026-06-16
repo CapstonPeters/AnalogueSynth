@@ -172,7 +172,7 @@ class Oscillator
 public:
     void prepare(double sampleRate) 
     { 
-        FLOG(juce::String::formatted("Oscillator::prepare sr=%.0f", sampleRate));
+        FLOG("Oscillator::prepare sr");
         sr = sampleRate; 
         randGen = FastRandom(static_cast<uint32_t>(sampleRate * 1000)); 
         FLOG("Oscillator::prepare done"); 
@@ -278,7 +278,7 @@ public:
 
     void prepare(double sampleRate) 
     { 
-        FLOG(juce::String::formatted("EnvelopeADSR::prepare sr=%.0f", sampleRate)); 
+        FLOG("EnvelopeADSR::prepare sr");
         sr = sampleRate;
         FLOG("EnvelopeADSR::prepare done"); 
     }
@@ -345,7 +345,7 @@ public:
 
     void prepare(double sampleRate) 
     { 
-        FLOG(juce::String::formatted("LFO::prepare sr=%.0f", sampleRate)); 
+        FLOG("LFO::prepare sr");
         sr = sampleRate; 
         randGen = FastRandom(static_cast<uint32_t>(sampleRate * 2000)); 
         FLOG("LFO::prepare done"); 
@@ -408,7 +408,7 @@ class Filter
 public:
     void prepare(double sampleRate) 
     { 
-        FLOG(juce::String::formatted("Filter::prepare sr=%.0f", sampleRate)); 
+        FLOG("Filter::prepare sr");
         sr = sampleRate; 
         FLOG("Filter::prepare done"); 
     }
@@ -504,7 +504,7 @@ public:
 
     void prepare(double sampleRate)
     {
-        FLOG(juce::String::formatted("SynthVoice::prepare sr=%.0f", sampleRate));
+        FLOG("SynthVoice::prepare sr");
         sr = sampleRate;
         for (auto& o : oscillators) o.prepare(sampleRate);
         for (auto& o : subOscillators) o.prepare(sampleRate);
@@ -642,7 +642,7 @@ public:
     {
         if (!isVoiceActive()) return;
 
-        FLOG(juce::String::formatted("renderNextBlock: voice=%d samples=%d active=%d", note, numSamples, isVoiceActive()));
+        FLOG("renderNextBlock: voice start");
 
         // Calculate filter cutoff modulation once per block (not per sample!)
         float modFilterCutoff = 0;

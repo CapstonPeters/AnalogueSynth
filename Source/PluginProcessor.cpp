@@ -135,7 +135,7 @@ void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    FLOG(juce::String::formatted("prepareToPlay: sr=%.0f block=%d", sampleRate, samplesPerBlock));
+    FLOG("static log");
     synth.setCurrentPlaybackSampleRate(sampleRate);
     for (auto* v : synth.getVoicesArray())
         if (auto* sv = dynamic_cast<SynthVoice*>(v))
