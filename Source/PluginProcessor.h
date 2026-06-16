@@ -62,13 +62,8 @@ private:
     std::mutex mutex;
 };
 
-// Stream-like logging macro (converts to string via stringstream)
-// Handle juce::String by using juce::String's own streaming
-#define FLOG(msg) do { \
-    juce::String _flog_str = msg; \
-    FileLogger::getInstance().log(_flog_str); \
-} while(0)
-
+// Replace DBG with file logging
+#define FLOG(msg) FileLogger::getInstance().log(juce::String(msg))
 #define FLOG_FMT(fmt, ...) FileLogger::getInstance().logf(fmt, ##__VA_ARGS__)
 
 //==============================================================================
@@ -176,7 +171,7 @@ private:
 class Oscillator
 {
 public:
-    void prepare(double sampleRate) { FLOG("Oscillator::prepare sr=" << sampleRate); sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 1000)); FLOG("Oscillator::prepare done"); }
+    void prepare(double sampleRate) { FLOG_FMT("Oscillator::prepare sr=%.0f", sampleRate); sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 1000)); FLOG_FMT("Oscillator::prepare done"); }
     void setWaveform(Waveform w) { waveform = w; }
     void setFrequency(float f) { baseFreq = f; updatePhaseInc(); }
     void setDetune(float cents) { detune = cents; updatePhaseInc(); }
@@ -276,7 +271,7 @@ class EnvelopeADSR
 public:
     enum class Stage { Idle, Attack, Decay, Sustain, Release };
 
-    void prepare(double sampleRate) { FLOG("EnvelopeADSR::prepare sr=" << sampleRate); sr = sampleRate; FLOG("EnvelopeADSR::prepare done"); }
+    void prepare(double sampleRate) { FLOG_FMT("EnvelopeADSR::prepare sr=%.0f", sampleRate); sr = sampleRate; FLOG_FMT("EnvelopeADSR::prepare done"); }
     void setParams(float a, float d, float s, float r)
     {
         attack  = juce::jmax(0.001f, a);
@@ -338,7 +333,7 @@ class LFO
 public:
     enum class Waveform { Sine = 0, Triangle = 1, Saw = 2, Square = 3, SampleHold = 4 };
 
-    void prepare(double sampleRate) { FLOG("LFO::prepare sr=" << sampleRate); sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 2000)); FLOG("LFO::prepare done"); }
+    void prepare(double sampleRate) { FLOG_FMT("LFO::prepare sr=%.0f", sampleRate); sr = sampleRate; randGen = FastRandom(static_cast<uint32_t>(sampleRate * 2000)); FLOG_FMT("LFO::prepare done"); }
     void setWaveform(Waveform w) { waveform = w; }
     void setRate(float hz) { rate = juce::jmax(0.01f, hz); updatePhaseInc(); }
     void setDelay(float d) { delay = d; delaySamples = static_cast<int>(d * sr); }
@@ -395,7 +390,7 @@ private:
 class Filter
 {
 public:
-    void prepare(double sampleRate) { FLOG("Filter::prepare sr=" << sampleRate); sr = sampleRate; FLOG("Filter::prepare done"); }
+    void prepare(double sampleRate) { FLOG_FMT("Filter::prepare sr=%.0f", sampleRate); sr = sampleRate; FLOG_FMT("Filter::prepare done"); }
     void setType(FilterType t) { type = t; }
     void setCutoff(float c) { cutoff = juce::jlimit(20.0f, 20000.0f, c); updateCoeffs(); }
     void setResonance(float r) { resonance = juce::jlimit(0.0f, 0.9f, r); updateCoeffs(); }
@@ -483,12 +478,12 @@ private:
 class SynthVoice : public juce::SynthesiserVoice
 {
 public:
-    SynthVoice() { FLOG("SynthVoice: Constructor"); }
-    ~SynthVoice() override { FLOG("SynthVoice: Destructor"); }
+    SynthVoice() { FLOG_FMT("SynthVoice: Constructor"); }
+    ~SynthVoice() override { FLOG_FMT("SynthVoice: Destructor"); }
 
     void prepare(double sampleRate)
     {
-        FLOG("SynthVoice::prepare sr=" << sampleRate);
+        FLOG_FMT("SynthVoice::prepare sr=%.0f", sampleRate);
         sr = sampleRate;
         for (auto& o : oscillators) o.prepare(sampleRate);
         for (auto& o : subOscillators) o.prepare(sampleRate);
@@ -498,7 +493,7 @@ public:
         lfo1.prepare(sampleRate);
         lfo2.prepare(sampleRate);
         filter.prepare(sampleRate);
-        FLOG("SynthVoice::prepare done");
+        FLOG_FMT("SynthVoice::prepare done");
     }
 
     void setParams(const juce::AudioProcessorValueTreeState& apvts)
@@ -626,7 +621,7 @@ public:
     {
         if (!isVoiceActive()) return;
 
-        FLOG("renderNextBlock: voice=" << note << " samples=" << numSamples << " active=" << isVoiceActive());
+        FLOG_FMT("renderNextBlock: voice=%d samples=%d active=%d", note, numSamples, isVoiceActive());
 
         // Calculate filter cutoff modulation once per block (not per sample!)
         float modFilterCutoff = 0;
@@ -662,27 +657,27 @@ public:
             }
 
             // Modulation sources
-            FLOG("  renderNextBlock: lfo1.process()");
+            FLOG_FMT("  renderNextBlock: lfo1.process()");
             float lfo1Val = lfo1.process();
-            FLOG("  renderNextBlock: lfo2.process()");
+            FLOG_FMT("  renderNextBlock: lfo2.process()");
             float lfo2Val = lfo2.process();
-            FLOG("  renderNextBlock: ampEnv.process()");
+            FLOG_FMT("  renderNextBlock: ampEnv.process()");
             float ampEnvVal = ampEnv.process();
-            FLOG("  renderNextBlock: filtEnv.process()");
+            FLOG_FMT("  renderNextBlock: filtEnv.process()");
             float filtEnvVal = filtEnv.process();
 
             // Generate oscillator signals
-            FLOG("  renderNextBlock: osc process");
+            FLOG_FMT("  renderNextBlock: osc process");
             float oscSum = 0;
             for (int o = 0; o < 3; ++o)
                 oscSum += oscillators[o].process();
 
             // Sub oscillator
-            FLOG("  renderNextBlock: sub.process()");
+            FLOG_FMT("  renderNextBlock: sub.process()");
             float sub = subOscillators[0].process() * subLevel;
 
             // Noise
-            FLOG("  renderNextBlock: noise.process()");
+            FLOG_FMT("  renderNextBlock: noise.process()");
             float noise = noiseOsc.process() * noiseLevel;
 
             float signal = (oscSum + sub + noise) * ampEnvVal;
@@ -691,7 +686,7 @@ public:
             if (!std::isfinite(signal)) { signal = 0; clearCurrentNote(); return; }
 
             // Filter (process stereo properly) - resonance already limited to 0.9 in setResonance
-            FLOG("  renderNextBlock: filter.processStereo()");
+            FLOG_FMT("  renderNextBlock: filter.processStereo()");
             float left = signal;
             float right = signal;
             filter.processStereo(left, right);
@@ -711,7 +706,7 @@ public:
         if (ampEnv.samplesSinceNoteOn > static_cast<int>(sr * 35.0))
             clearCurrentNote();
         
-        DBG("renderNextBlock: done");
+        FLOG_FMT("renderNextBlock: done");
     }
 
 private:
