@@ -14,9 +14,7 @@
 #include <mutex>
 
 //==============================================================================
-// File logging for debugging (since Bitwig Debug Log is unreliable)
-// Disable logging in Release builds to avoid MSVC issues
-#ifdef _DEBUG
+// File logging for debugging (enabled in both Debug and Release for Windows crash tracing)
 class FileLogger
 {
 public:
@@ -56,9 +54,6 @@ private:
 };
 
 #define FLOG(msg) FileLogger::getInstance().log(msg)
-#else
-#define FLOG(msg) do {} while(0)
-#endif
 //==============================================================================
 // Parameter IDs (string constants for APVTS)
 struct ParamID
