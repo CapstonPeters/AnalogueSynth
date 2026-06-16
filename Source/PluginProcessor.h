@@ -64,7 +64,7 @@ private:
 
 // Replace DBG with file logging
 #define FLOG(msg) FileLogger::getInstance().log(juce::String(msg))
-#define FLOG_FMT(fmt, ...) FileLogger::getInstance().logf(fmt, ##__VA_ARGS__)
+#define FLOG_FMT(fmt, ...) FileLogger::getInstance().logf(fmt, __VA_ARGS__)
 //==============================================================================
 // Parameter IDs (string constants for APVTS)
 struct ParamID
