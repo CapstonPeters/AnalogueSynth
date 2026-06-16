@@ -13,8 +13,11 @@
 class TestOscillator
 {
 public:
+    enum WaveType { Sine = 0, Square = 1, Saw = 2 };
+    
     void prepare(double sampleRate) { sr = sampleRate; }
     void setFrequency(float f) { freq = f; phaseInc = f / sr * 2.0 * juce::MathConstants<double>::pi; }
+    void setWaveType(WaveType wt) { waveType = wt; }
     void noteOn() { phase = 0; active = true; }
     void noteOff() { active = false; }
     void setActive(bool a) { active = a; if (a) phase = 0; }
@@ -23,17 +26,26 @@ public:
     float process()
     {
         if (!active) return 0.0f;
-        float sample = std::sin(phase) * 0.3f;
+        float sample = 0.0f;
+        switch (waveType)
+        {
+            case Sine:   sample = std::sin(phase); break;
+            case Square: sample = (phase < juce::MathConstants<double>::pi) ? 1.0f : -1.0f; break;
+            case Saw:    sample = 2.0f * (phase / (2.0 * juce::MathConstants<double>::pi)) - 1.0f; break;
+        }
+        sample *= 0.3f;
         phase += phaseInc;
         if (phase > 2.0 * juce::MathConstants<double>::pi) phase -= 2.0 * juce::MathConstants<double>::pi;
         return sample;
     }
+    WaveType getWaveType() const { return waveType; }
 private:
     double sr = 44100;
     double phase = 0;
     double phaseInc = 0;
     float freq = 440;
     bool active = false;
+    WaveType waveType = Sine;
 };
 
 //==============================================================================
@@ -50,6 +62,7 @@ public:
         note = midiNote;
     }
     void stopNote() { osc.noteOff(); }
+    void setWaveType(TestOscillator::WaveType wt) { osc.setWaveType(wt); }
     bool isActive() const { return osc.isActive(); }
     float process() { return osc.process() * level; }
     int getNote() const { return note; }
@@ -89,6 +102,17 @@ public:
     // Test tone control (for debugging audio path)
     void setTestToneActive(bool active) { testToneActive.store(active); if (active) testToneOsc.setActive(true); else testToneOsc.setActive(false); }
     bool isTestToneActive() const { return testToneActive.load(); }
+    
+    // Wave type control for test tone and voices
+    void setWaveType(TestOscillator::WaveType wt) 
+    { 
+        testToneOsc.setWaveType(wt);
+        for (auto& v : voices) 
+        {
+            v.setWaveType(wt);
+        }
+    }
+    TestOscillator::WaveType getWaveType() const { return testToneOsc.getWaveType(); }
 
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
