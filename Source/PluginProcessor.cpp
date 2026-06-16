@@ -105,7 +105,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
         addFloat(ParamID::modAmt[i],  "Mod " + juce::String(i+1) + " Amount", -1.0f, 1.0f, 0.0f);
     }
 
-    FLOG_FMT("createParameterLayout: mod matrix params added, total=%d", (int)params.size());
+    FLOG(juce::String::formatted("createParameterLayout: mod matrix params added, total=%d", (int)params.size()));
     return { params.begin(), params.end() };
 }
 
@@ -120,7 +120,7 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
         synth.addVoice(new SynthVoice());
 
     synth.addSound(new SimpleSynthSound());
-    FLOG_FMT("AnalogSynthAudioProcessor: Constructor done, voices=%d", synth.getVoicesArray().size());
+    FLOG(juce::String::formatted("AnalogSynthAudioProcessor: Constructor done, voices=%d", synth.getVoicesArray().size()));
 }
 
 void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
@@ -135,7 +135,7 @@ void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    FLOG_FMT("prepareToPlay: sr=%.0f block=%d", sampleRate, samplesPerBlock);
+    FLOG(juce::String::formatted("prepareToPlay: sr=%.0f block=%d", sampleRate, samplesPerBlock));
     synth.setCurrentPlaybackSampleRate(sampleRate);
     for (auto* v : synth.getVoicesArray())
         if (auto* sv = dynamic_cast<SynthVoice*>(v))
@@ -168,8 +168,8 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Log first few blocks
     if (processBlockCount <= 3)
     {
-        FLOG_FMT("processBlock #%d: samples=%d channels=%d midiEvents=%d", 
-            processBlockCount, totalSamplesThisBlock, buffer.getNumChannels(), midiMessages.getNumEvents());
+        FLOG(juce::String::formatted("processBlock #%d: samples=%d channels=%d midiEvents=%d", 
+            processBlockCount, totalSamplesThisBlock, buffer.getNumChannels(), midiMessages.getNumEvents()));
     }
     
     // Safety: if we've processed too many blocks without audio output, reset
@@ -186,11 +186,11 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
-            FLOG_FMT("MIDI NoteOn: note=%d vel=%.2f", msg.getNoteNumber(), msg.getVelocity());
+            FLOG(juce::String::formatted("MIDI NoteOn: note=%d vel=%.2f", msg.getNoteNumber(), msg.getVelocity()));
         }
         else if (msg.isNoteOff())
         {
-            FLOG_FMT("MIDI NoteOff: note=%d", msg.getNoteNumber());
+            FLOG(juce::String::formatted("MIDI NoteOff: note=%d", msg.getNoteNumber()));
         }
     }
 
