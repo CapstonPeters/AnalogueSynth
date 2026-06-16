@@ -43,6 +43,9 @@ juce_add_plugin(AnalogSynth
     FORMATS VST3
     CXX_STANDARD 20
     VST3_CATEGORIES "Instrument|Synth"
+    PLUGIN_UID "E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B"
+    PLUGIN_CLASS "AnalogSynthAudioProcessor"
+    PLUGIN_CODE "AnSy"
 )
 
 # Add our source files to the plugin target
@@ -78,21 +81,12 @@ endif()
 
 # VST3-specific settings
 target_compile_definitions(AnalogSynth PRIVATE
-    JUCE_VST3_CUSTOM_BUNDLE_SUFFIX=\"\\\"\\\"\"
+    JUCE_VST3_CUSTOM_BUNDLE_SUFFIX=\"\"\"
     JUCE_PLUGIN_NAME=\"AnalogSynth\"
     JUCE_VST3_CAN_REPLACE_VST2=0
-    JucePlugin_IsSynth=1
-    JucePlugin_VST3PluginUID=\"{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}\"
     # Explicit MIDI for VST3 on Windows
     JucePlugin_WantsMidiInput=1
     JucePlugin_WantsMidiOutput=0
     VST3_NUM_MIDI_INPUTS=1
     VST3_NUM_MIDI_OUTPUTS=0
-)
-
-# Enable VST3 module generation (ensures plugin.xml, moduleinfo.json are created)
-set_target_properties(AnalogSynth PROPERTIES
-    VST3_MODULE_NAME "AnalogSynth"
-    VST3_PLUGIN_UID "E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B"
-    VST3_PLUGIN_CLASS "AnalogSynthAudioProcessor"
 )

@@ -54,74 +54,35 @@ jobs:
           $parentDir = Split-Path $vst3Dir
           Write-Host "Found VST3 at: $vst3Dir"
           
-          # FIX: JUCE on Windows puts plugin.xml and moduleinfo.json in Contents/Resources/
-          # Bitwig expects them in Contents/x86_64-win/ - COPY TO BOTH LOCATIONS with CORRECT CID
-          $contentsDir = Join-Path $vst3Dir "Contents"
-          $x64Dir = Join-Path $contentsDir "x86_64-win"
-          $resourcesDir = Join-Path $contentsDir "Resources"
-          
-          # Generate CORRECT moduleinfo.json and plugin.xml content
-          $moduleInfoJson = '{"Name":"AnalogSynth","Version":"1.0.0","Factory Info":{"Vendor":"AnalogSynth","URL":"","E-Mail":"","Flags":{"Unicode":true,"Classes Discardable":false,"Component Non Discardable":false}},"Classes":[{"CID":"{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}","Category":"Audio Module Class","Name":"AnalogSynth","Vendor":"AnalogSynth","Version":"1.0.0","SDKVersion":"VST 3.7.11","Sub Categories":["Instrument","Instrument","Synth"],"Class Flags":2,"Cardinality":2147483647,"Snapshots":[]},{"CID":"{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}","Category":"Component Controller Class","Name":"AnalogSynth","Vendor":"AnalogSynth","Version":"1.0.0","SDKVersion":"VST 3.7.11","Sub Categories":["Instrument","Instrument","Synth"],"Class Flags":2,"Cardinality":2147483647,"Snapshots":[]},{"CID":"{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}","Category":"Plugin Compatibility Class","Name":"AnalogSynth","Vendor":"AnalogSynth","Version":"1.0.0","SDKVersion":"VST 3.7.11","Class Flags":0,"Cardinality":2147483647,"Snapshots":[]}]}'
-          
-          $xml = '<?xml version="1.0" encoding="UTF-8"?>' + "`n" +
-          '<plugin version="1" xmlns="http://www.steinberg.net/vst3/2008/plugin" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.steinberg.net/vst3/2008/plugin plugin.xsd">' + "`n" +
-          '  <name>AnalogSynth</name>' + "`n" +
-          '  <description>3-oscillator analog-style VST3 synthesizer</description>' + "`n" +
-          '  <version>1.0.0</version>' + "`n" +
-          '  <manufacturer>AnalogSynth</manufacturer>' + "`n" +
-          '  <vendor-url></vendor-url>' + "`n" +
-          '  <flags>IsSynth</flags>' + "`n" +
-          '  <category>Instrument|Synth</category>' + "`n" +
-          '  <class name="AnalogSynthVST3AudioProcessor" cid="{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}"/>' + "`n" +
-          '  <component name="AnalogSynthAudioProcessor" cid="{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}">' + "`n" +
-          '    <audio>' + "`n" +
-          '      <bus name="Stereo Out" type="kMain" channel-count="2" flags="kOutput"/>' + "`n" +
-          '    </audio>' + "`n" +
-          '    <event>' + "`n" +
-          '      <bus name="Event In" type="kMain" channel-count="16" flags="kInput"/>' + "`n" +
-          '    </event>' + "`n" +
-          '    <presets/>' + "`n" +
-          '  </component>' + "`n" +
-          '  <controller name="AnalogSynthController" cid="{E3A8F2B1-4C7D-4A9E-8B3F-1D2C5E7F9A0B}">' + "`n" +
-          '    <presets/>' + "`n" +
-          '  </controller>' + "`n" +
-          '</plugin>'
-          
-          # Write CORRECT files to BOTH locations
-          ForEach ($targetDir in @($x64Dir, $resourcesDir)) {
-            if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force | Out-Null }
-            
-            $moduleInfoDst = Join-Path $targetDir "moduleinfo.json"
-            Set-Content -Path $moduleInfoDst -Value $moduleInfoJson -Encoding UTF8
-            Write-Host "Generated moduleinfo.json with correct CID in $targetDir"
-            
-            $pluginXmlDst = Join-Path $targetDir "plugin.xml"
-            Set-Content -Path $pluginXmlDst -Value $xml -Encoding UTF8
-            Write-Host "Generated plugin.xml with correct CID in $targetDir"
-          }
-          
           # DEBUG: Show final VST3 bundle structure
           Write-Host "=== FINAL VST3 TREE ==="
           Get-ChildItem -Path "$vst3Dir" -Recurse | Select-Object FullName, Length
           
-          # DEBUG: Verify all required files exist
+          # DEBUG: Verify plugin.xml and moduleinfo.json exist with correct CID
           Write-Host "=== VERIFICATION ==="
           foreach ($file in @("plugin.xml", "moduleinfo.json")) {
-            foreach ($dir in @($x64Dir, $resourcesDir)) {
-              $path = Join-Path $dir $file
-              if (Test-Path $path) { Write-Host "✓ $file exists in $dir" } else { Write-Warning "✗ $file MISSING in $dir" }
+            foreach ($dirName in @("x86_64-win", "Resources")) {
+              $dirPath = Join-Path "$vst3Dir\Contents" $dirName
+              $path = Join-Path $dirPath $file
+              if (Test-Path $path) { 
+                Write-Host "✓ $file exists in $dirName"
+                Write-Host "--- $file CONTENTS ---"
+                Get-Content $path
+              } else { 
+                Write-Warning "✗ $file MISSING in $dirName" 
+              }
             }
           }
           
-          $dll = Get-ChildItem -Path "$x64Dir" -Filter "*.vst3" -ErrorAction SilentlyContinue
+          $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
           if ($dll) {
             Write-Host "✓ Found plugin DLL: $($dll.FullName) ($($dll.Length) bytes)"
           } else {
             Write-Warning "✗ No DLL found in x86_64-win!"
           }
           
-          $zipPath = "$(Get-Location)\\AnalogSynth-Windows.vst3.zip"
-          Compress-Archive -Path "$parentDir\\AnalogSynth.vst3" -DestinationPath $zipPath -Force
+          $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
+          Compress-Archive -Path "$parentDir\AnalogSynth.vst3" -DestinationPath $zipPath -Force
           Write-Host "Created zip: $zipPath"
           echo "zip_path=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
