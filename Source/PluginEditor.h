@@ -17,6 +17,7 @@ public:
 private:
     AnalogSynthAudioProcessor& processorRef;
     juce::TextButton testToneButton;
+    juce::ComboBox waveTypeComboBox;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessorEditor)
 };

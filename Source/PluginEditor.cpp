@@ -2,7 +2,7 @@
 #include "PluginProcessor.h"
 
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p), testToneButton ("Test Tone")
+    : AudioProcessorEditor (&p), processorRef (p), testToneButton ("Test Tone"), waveTypeComboBox()
 {
     setSize (600, 400);
     setResizable (true, true);
@@ -19,6 +19,13 @@ AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAud
         testToneButton.setColour(juce::TextButton::buttonColourId, testToneButton.getToggleState() ? juce::Colour(0xFFE74C3C) : juce::Colour(0xFF2ECC71));
         repaint();
     };
+
+    addAndMakeVisible(waveTypeComboBox);
+    waveTypeComboBox.addItem("Sine", 1);
+    waveTypeComboBox.addItem("Square", 2);
+    waveTypeComboBox.addItem("Saw", 3);
+    waveTypeComboBox.setSelectedId(1);
+    waveTypeComboBox.setTooltip("Wave type (UI only - not connected to audio yet)");
 }
 
 AnalogSynthAudioProcessorEditor::~AnalogSynthAudioProcessorEditor() = default;
@@ -41,4 +48,7 @@ void AnalogSynthAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
     auto buttonArea = bounds.removeFromTop(60).removeFromBottom(40);
     testToneButton.setBounds(buttonArea.reduced(200, 0));
+
+    auto comboArea = bounds.removeFromTop(40).removeFromBottom(30);
+    waveTypeComboBox.setBounds(comboArea.reduced(200, 0));
 }
