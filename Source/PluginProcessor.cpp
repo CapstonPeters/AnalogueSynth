@@ -5,7 +5,7 @@
 //==============================================================================
 juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::createParameterLayout()
 {
-    DBG("createParameterLayout: START");
+    FLOG("createParameterLayout: START");
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     auto addFloat = [&](const char* id, const juce::String& name, float min, float max, float def)
@@ -15,7 +15,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     auto addChoice = [&](const char* id, const juce::String& name, const juce::StringArray& choices, int def)
     { params.push_back(std::make_unique<juce::AudioParameterChoice>(id, name, choices, def)); };
 
-    DBG("createParameterLayout: lambdas created, adding params...");
+    FLOG("createParameterLayout: lambdas created, adding params...");
 
     // Global
     addFloat(ParamID::masterVolume, "Master Volume", -60.0f, 12.0f, 0.0f);
@@ -25,7 +25,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat (ParamID::unisonDetune, "Unison Detune", 0.0f, 50.0f, 5.0f);
     addFloat (ParamID::unisonSpread, "Unison Spread", 0.0f, 100.0f, 20.0f);
 
-    DBG("createParameterLayout: global params added");
+    FLOG("createParameterLayout: global params added");
 
     // Oscillator 1
     addChoice(ParamID::osc1Waveform, "Osc 1 Waveform", { "Sine", "Triangle", "Saw", "Square", "Noise" }, 2);
@@ -57,7 +57,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParamID::noiseLevel,       "Noise Level", 0.0f, 1.0f, 0.0f);
     addFloat(ParamID::subLevel,         "Sub Level",   0.0f, 1.0f, 0.0f);
 
-    DBG("createParameterLayout: osc params added");
+    FLOG("createParameterLayout: osc params added");
 
     // Filter
     addChoice(ParamID::filterType, "Filter Type", { "LP12", "LP24", "HP12", "HP24", "BP12", "BP24", "Notch" }, 1);
@@ -92,7 +92,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParamID::lfo2Delay,    "LFO 2 Delay",    0.0f, 5.0f, 0.0f);
     addFloat(ParamID::lfo2Fade,     "LFO 2 Fade",     0.0f, 5.0f, 0.0f);
 
-    DBG("createParameterLayout: env/lfo params added");
+    FLOG("createParameterLayout: env/lfo params added");
 
     // Mod Matrix (8 slots)
     juce::StringArray modSources = { "None", "LFO 1", "LFO 2", "Amp Env", "Filt Env", "Velocity", "Mod Wheel", "Aftertouch", "Pitch Bend", "Key Track" };
@@ -105,7 +105,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
         addFloat(ParamID::modAmt[i],  "Mod " + juce::String(i+1) + " Amount", -1.0f, 1.0f, 0.0f);
     }
 
-    DBG("createParameterLayout: mod matrix params added, total=" << params.size());
+    FLOG("createParameterLayout: mod matrix params added, total=" << params.size());
     return { params.begin(), params.end() };
 }
 
@@ -114,13 +114,13 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true))
     , apvts (*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    DBG("AnalogSynthAudioProcessor: Constructor start");
+    FLOG("AnalogSynthAudioProcessor: Constructor start");
     // Initialize 16 voices max
     for (int i = 0; i < 16; ++i)
         synth.addVoice(new SynthVoice());
 
     synth.addSound(new SimpleSynthSound());
-    DBG("AnalogSynthAudioProcessor: Constructor done, voices=" << synth.getVoicesArray().size());
+    FLOG("AnalogSynthAudioProcessor: Constructor done, voices=" << synth.getVoicesArray().size());
 }
 
 void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
@@ -135,7 +135,7 @@ void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    DBG("prepareToPlay: sr=" << sampleRate << " block=" << samplesPerBlock);
+    FLOG("prepareToPlay: sr=" << sampleRate << " block=" << samplesPerBlock);
     synth.setCurrentPlaybackSampleRate(sampleRate);
     for (auto* v : synth.getVoicesArray())
         if (auto* sv = dynamic_cast<SynthVoice*>(v))
@@ -146,7 +146,7 @@ void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     
     // Initial param sync
     updateSynthParamsIfNeeded();
-    DBG("prepareToPlay: done");
+    FLOG("prepareToPlay: done");
 }
 
 void AnalogSynthAudioProcessor::releaseResources() {}
@@ -168,7 +168,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Log first few blocks
     if (processBlockCount <= 3)
     {
-        DBG("processBlock #" << processBlockCount << ": samples=" << totalSamplesThisBlock 
+        FLOG("processBlock #" << processBlockCount << ": samples=" << totalSamplesThisBlock 
             << " channels=" << buffer.getNumChannels() 
             << " midiEvents=" << midiMessages.getNumEvents());
     }
@@ -187,11 +187,11 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
-            DBG("MIDI NoteOn: note=" << msg.getNoteNumber() << " vel=" << msg.getVelocity());
+            FLOG("MIDI NoteOn: note=" << msg.getNoteNumber() << " vel=" << msg.getVelocity());
         }
         else if (msg.isNoteOff())
         {
-            DBG("MIDI NoteOff: note=" << msg.getNoteNumber());
+            FLOG("MIDI NoteOff: note=" << msg.getNoteNumber());
         }
     }
 
