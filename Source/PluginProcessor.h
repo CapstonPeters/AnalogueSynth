@@ -12,7 +12,6 @@
 #include <array>
 #include <fstream>
 #include <mutex>
-#include <sstream>
 
 //==============================================================================
 // File logging for debugging (since Bitwig Debug Log is unreliable)
@@ -64,10 +63,10 @@ private:
 };
 
 // Stream-like logging macro (converts to string via stringstream)
+// Handle juce::String by using juce::String's own streaming
 #define FLOG(msg) do { \
-    std::ostringstream _flog_ss; \
-    _flog_ss << msg; \
-    FileLogger::getInstance().log(_flog_ss.str()); \
+    juce::String _flog_str = msg; \
+    FileLogger::getInstance().log(_flog_str); \
 } while(0)
 
 #define FLOG_FMT(fmt, ...) FileLogger::getInstance().logf(fmt, ##__VA_ARGS__)
