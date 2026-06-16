@@ -105,7 +105,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
         addFloat(ParamID::modAmt[i],  "Mod " + juce::String(i+1) + " Amount", -1.0f, 1.0f, 0.0f);
     }
 
-    FLOG("createParameterLayout: mod matrix params added, total=")params.size());
+    FLOG_FMT("createParameterLayout: mod matrix params added, total=%d", (int)params.size());
     return { params.begin(), params.end() };
 }
 
@@ -120,7 +120,7 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
         synth.addVoice(new SynthVoice());
 
     synth.addSound(new SimpleSynthSound());
-    FLOG("AnalogSynthAudioProcessor: Constructor done, voices=").size());
+    FLOG_FMT("AnalogSynthAudioProcessor: Constructor done, voices=%d", synth.getVoicesArray().size());
 }
 
 void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
@@ -135,7 +135,7 @@ void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    FLOG("prepareToPlay: sr=%.0f block=");
+    FLOG_FMT("prepareToPlay: sr=%.0f block=%d", sampleRate, samplesPerBlock);
     synth.setCurrentPlaybackSampleRate(sampleRate);
     for (auto* v : synth.getVoicesArray())
         if (auto* sv = dynamic_cast<SynthVoice*>(v))
@@ -168,7 +168,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Log first few blocks
     if (processBlockCount <= 3)
     {
-        FLOG("processBlock #%d: samples=%d channels=%d midiEvents=%d", 
+        FLOG_FMT("processBlock #%d: samples=%d channels=%d midiEvents=%d", 
             processBlockCount, totalSamplesThisBlock, buffer.getNumChannels(), midiMessages.getNumEvents());
     }
     
@@ -186,11 +186,11 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
-            FLOG("MIDI NoteOn: note="), msg.getVelocity());
+            FLOG_FMT("MIDI NoteOn: note=%d vel=%.2f", msg.getNoteNumber(), msg.getVelocity());
         }
         else if (msg.isNoteOff())
         {
-            FLOG("MIDI NoteOff: note="));
+            FLOG_FMT("MIDI NoteOff: note=%d", msg.getNoteNumber());
         }
     }
 
