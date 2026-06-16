@@ -15,6 +15,8 @@
 
 //==============================================================================
 // File logging for debugging (since Bitwig Debug Log is unreliable)
+// Disable logging in Release builds to avoid MSVC issues
+#ifdef _DEBUG
 class FileLogger
 {
 public:
@@ -24,7 +26,7 @@ public:
         return instance;
     }
     
-    void log(const juce::String& message)
+    void log(const char* message)
     {
         std::lock_guard<std::mutex> lock(mutex);
         if (!file.is_open())
@@ -41,18 +43,9 @@ public:
         }
         if (file.is_open())
         {
-            file << message.toStdString() << "\n";
+            file << message << "\n";
             file.flush();
         }
-    }
-    
-    // Variadic template for printf-style logging
-    template<typename... Args>
-    void logf(const char* format, Args... args)
-    {
-        char buffer[2048];
-        std::snprintf(buffer, sizeof(buffer), format, args...);
-        log(juce::String(buffer));
     }
 
 private:
@@ -62,9 +55,10 @@ private:
     std::mutex mutex;
 };
 
-// Replace DBG with file logging
-#define FLOG(msg) FileLogger::getInstance().log(juce::String(msg))
-// Use juce::String::formatted for printf-style: FLOG(juce::String::formatted("value: %d", 42))
+#define FLOG(msg) FileLogger::getInstance().log(msg)
+#else
+#define FLOG(msg) do {} while(0)
+#endif
 //==============================================================================
 // Parameter IDs (string constants for APVTS)
 struct ParamID

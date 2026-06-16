@@ -105,7 +105,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
         addFloat(ParamID::modAmt[i],  "Mod " + juce::String(i+1) + " Amount", -1.0f, 1.0f, 0.0f);
     }
 
-    FLOG(juce::String::formatted("createParameterLayout: mod matrix params added, total=%d", (int)params.size()));
+    FLOG("createParameterLayout: mod matrix params added");
     return { params.begin(), params.end() };
 }
 
@@ -120,7 +120,7 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
         synth.addVoice(new SynthVoice());
 
     synth.addSound(new SimpleSynthSound());
-    FLOG(juce::String::formatted("AnalogSynthAudioProcessor: Constructor done, voices=%d", synth.getVoicesArray().size()));
+    FLOG("AnalogSynthAudioProcessor: Constructor done");
 }
 
 void AnalogSynthAudioProcessor::updateSynthParamsIfNeeded()
@@ -168,8 +168,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // Log first few blocks
     if (processBlockCount <= 3)
     {
-        FLOG(juce::String::formatted("processBlock #%d: samples=%d channels=%d midiEvents=%d", 
-            processBlockCount, totalSamplesThisBlock, buffer.getNumChannels(), midiMessages.getNumEvents()));
+        FLOG("processBlock");
     }
     
     // Safety: if we've processed too many blocks without audio output, reset
@@ -186,11 +185,11 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         const auto msg = metadata.getMessage();
         if (msg.isNoteOn())
         {
-            FLOG(juce::String::formatted("MIDI NoteOn: note=%d vel=%.2f", msg.getNoteNumber(), msg.getVelocity()));
+            FLOG("MIDI NoteOn");
         }
         else if (msg.isNoteOff())
         {
-            FLOG(juce::String::formatted("MIDI NoteOff: note=%d", msg.getNoteNumber()));
+            FLOG("MIDI NoteOff");
         }
     }
 
