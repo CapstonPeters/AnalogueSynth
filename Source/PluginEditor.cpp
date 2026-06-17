@@ -1,6 +1,5 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
-#include "ParameterIDs.h"
 
 // Helper function for creating rotary sliders
 static void setupRotarySlider(juce::Slider& slider, juce::Label& label, const juce::String& paramID,

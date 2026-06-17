@@ -50,7 +50,7 @@ void SynthVoice::process(float& outL, float& outR)
 {
     if (!active) { outL = outR = 0; return; }
     
-    // Safety timeout
+    // Safety timeout - check at start of each process call
     if (samplesSinceNoteOn > MaxVoiceSamples)
     {
         active = false;
@@ -84,12 +84,12 @@ void SynthVoice::process(float& outL, float& outR)
     float exprPedalVal = 1.0f;
     
     // Filter cutoff modulation
-    float filtMod = synthParams.modMatrix.getModulation(ModDest::FilterCutoff, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, modWheelVal, aftertouchVal, pitchBendVal, exprPedalVal);
+    float filtMod = modMatrix.getModulation(ModDest::FilterCutoff, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, modWheelVal, aftertouchVal, pitchBendVal, exprPedalVal);
     filtMod += filtEnvOut * synthParams.filtAmount;
     filter.setCutoffMod(filtMod);
     
     // Oscillator pitch modulation (LFO1 -> pitch)
-    float pitchMod = synthParams.modMatrix.getModulation(ModDest::Osc1Pitch, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, modWheelVal, aftertouchVal, pitchBendVal, exprPedalVal);
+    float pitchMod = modMatrix.getModulation(ModDest::Osc1Pitch, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, modWheelVal, aftertouchVal, pitchBendVal, exprPedalVal);
     float pitchMult = std::pow(2.0f, pitchMod / 12.0f);
     
     // Process oscillators
@@ -135,6 +135,9 @@ void SynthVoice::process(float& outL, float& outR)
     // Hard clip
     outL = std::clamp(outL, -1.0f, 1.0f);
     outR = std::clamp(outR, -1.0f, 1.0f);
+    
+    // Increment sample counter
+    samplesSinceNoteOn++;
 }
 
 //==============================================================================
@@ -157,8 +160,6 @@ AnalogSynthAudioProcessor::AnalogSynthAudioProcessor()
 
 void AnalogSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    currentSampleRate = sampleRate;
-    
     synth.prepare(sampleRate, 16); // Max 16 voices
     testToneOsc.prepare(sampleRate);
     testToneOsc.setFrequency(440.0f);
@@ -181,15 +182,11 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     
     const int numSamples = buffer.getNumSamples();
     
-    // Update params from APVTS (only when changed)
-    static uint32_t paramHash = 0;
-    uint32_t newHash = 0;
-    for (const auto& param : apvts.getParameters())
-        newHash = newHash * 31 + static_cast<uint32_t>(param->getValue() * 1000000);
-    
-    if (newHash != paramHash)
+    // Update params from APVTS every 64 blocks to avoid overhead
+    static int paramUpdateCounter = 0;
+    if (++paramUpdateCounter >= 64)
     {
-        paramHash = newHash;
+        paramUpdateCounter = 0;
         updateSynthParams();
     }
     

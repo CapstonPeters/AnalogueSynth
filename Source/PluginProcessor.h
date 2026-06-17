@@ -697,6 +697,7 @@ public:
     
     bool isActive() const { return active; }
     int getNote() const { return note; }
+    int getSamplesSinceNoteOn() const { return samplesSinceNoteOn; }
     
     void updateParams(const class SynthParams& params);
     
@@ -709,6 +710,10 @@ private:
     float velocity = 1.0f;
     bool active = false;
     int samplesSinceNoteOn = 0;
+    
+    // Velocity sensitivity for envelopes (set via updateParams)
+    float ampVelSens = 0.5f;
+    float filtVelSens = 0.0f;
     
     // Oscillators
     std::array<Oscillator, 3> oscillators;
@@ -833,9 +838,9 @@ public:
                 freeIdx = i;
                 break;
             }
-            if (voices[i].samplesSinceNoteOn > oldestSamples)
+            if (voices[i].getSamplesSinceNoteOn() > oldestSamples)
             {
-                oldestSamples = voices[i].samplesSinceNoteOn;
+                oldestSamples = voices[i].getSamplesSinceNoteOn();
                 oldestIdx = i;
             }
         }
@@ -857,6 +862,8 @@ public:
         std::fill(outL, outL + numSamples, 0.0f);
         std::fill(outR, outR + numSamples, 0.0f);
         
+        const auto& p = getParams();
+        
         // Process each voice
         for (auto& v : voices)
         {
@@ -869,11 +876,11 @@ public:
                 outL[i] += voiceL;
                 outR[i] += voiceR;
             }
-            v.samplesSinceNoteOn += numSamples;
+            // samplesSinceNoteOn is updated inside voice.process()
         }
         
         // Apply master gain
-        float g = params.masterGain;
+        float g = p.masterGain;
         for (int i = 0; i < numSamples; ++i)
         {
             outL[i] *= g;
