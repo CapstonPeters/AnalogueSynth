@@ -139,12 +139,10 @@ private:
     private:
         juce::String titleText;
         juce::Colour accent;
-    };
+        };
     
-    AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p);
-    
-    AnalogSynthAudioProcessor& processorRef;
-    juce::AudioProcessorValueTreeState& apvts;
+        AnalogSynthAudioProcessor& processorRef;
+        juce::AudioProcessorValueTreeState& apvts;
     
     // Top bar
     juce::TextButton testToneButton;

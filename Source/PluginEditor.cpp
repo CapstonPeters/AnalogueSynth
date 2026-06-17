@@ -92,7 +92,6 @@ static void styleKnob(juce::Slider& slider, const juce::String& suffix = "")
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 54, 20);
     slider.setTextValueSuffix(suffix);
-    slider.setDoubleClickReturnValue(true);
 }
 
 static void styleCombo(juce::ComboBox& combo)
@@ -486,6 +485,3 @@ juce::Label modLabel;
 std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> 
     osc1WaveAtt, osc2WaveAtt, osc3WaveAtt, subWaveAtt, noiseWaveAtt,
     filterTypeAtt, lfo1WaveAtt, lfo2WaveAtt, waveTypeAttachment;
-
-juce::AudioProcessorValueTreeState& apvts;
-AnalogSynthAudioProcessor& processorRef;
