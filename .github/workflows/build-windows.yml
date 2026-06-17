@@ -10,9 +10,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
 
-    env:
-      SCCACHE_DIR: ${{ runner.temp }}/sccache
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,12 +42,14 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set SCCACHE_DIR=%RUNNER_TEMP%\sccache
           cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
       - name: Build Release
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set SCCACHE_DIR=%RUNNER_TEMP%\sccache
           cmake --build build --config Release -j%NUMBER_OF_PROCESSORS%
 
       - name: Debug - List build output
