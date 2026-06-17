@@ -476,8 +476,3 @@ juce::AudioProcessorEditor* AnalogSynthAudioProcessor::createEditor()
 {
     return new AnalogSynthAudioProcessorEditor (*this);
 }
-
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
-{
-    return new AnalogSynthAudioProcessor();
-}
