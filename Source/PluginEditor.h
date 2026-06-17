@@ -124,7 +124,8 @@ private:
             g.fillRoundedRectangle(bounds.reduced(1), 8.0f);
             
             g.setColour(accent);
-            g.fillRect(bounds.removeFromTop(2).reduced(2, 1), 8.0f);
+            auto accentRect = bounds.removeFromTop(2).reduced(2, 1);
+            g.fillRoundedRectangle(accentRect, 8.0f);
             
             g.setColour(juce::Colour(0xFF2A2A3A));
             g.drawRoundedRectangle(bounds.reduced(0.5f), 8.0f, 1.0f);
@@ -168,11 +169,10 @@ private:
     
     // Wave combos
     juce::ComboBox osc1Wave, osc2Wave, osc3Wave, subWave, noiseWave, filterType, lfo1Wave, lfo2Wave;
-    juce::ComboBox waveTypeComboBox;
     
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> 
         osc1WaveAtt, osc2WaveAtt, osc3WaveAtt, subWaveAtt, noiseWaveAtt,
-        filterTypeAtt, lfo1WaveAtt, lfo2WaveAtt, waveTypeAttachment;
+        filterTypeAtt, lfo1WaveAtt, lfo2WaveAtt;
     
     // Section panels
     SectionPanel oscPanel{"OSCILLATORS", juce::Colour(0xFF00D4AA)};
