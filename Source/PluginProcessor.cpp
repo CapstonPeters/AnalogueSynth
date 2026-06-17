@@ -44,6 +44,10 @@ void SynthVoice::updateParams(const SynthParams& p)
     // LFOs
     lfo1.setParams(static_cast<LFO::WaveType>(p.lfo1Wave), p.lfo1Rate, p.lfo1Amount, p.lfo1Delay, p.lfo1Fade);
     lfo2.setParams(static_cast<LFO::WaveType>(p.lfo2Wave), p.lfo2Rate, p.lfo2Amount, p.lfo2Delay, p.lfo2Fade);
+    
+    // Mod Matrix
+    modMatrix = p.modMatrix;
+    filtAmount = p.filtAmount;
 }
 
 void SynthVoice::process(float& outL, float& outR)
@@ -85,7 +89,7 @@ void SynthVoice::process(float& outL, float& outR)
     
     // Filter cutoff modulation
     float filtMod = modMatrix.getModulation(ModDest::FilterCutoff, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, modWheelVal, aftertouchVal, pitchBendVal, exprPedalVal);
-    filtMod += filtEnvOut * synthParams.filtAmount;
+    filtMod += filtEnvOut * filtAmount;
     filter.setCutoffMod(filtMod);
     
     // Oscillator pitch modulation (LFO1 -> pitch)
@@ -118,8 +122,8 @@ void SynthVoice::process(float& outL, float& outR)
     }
     
     // Apply amp envelope
-    oscSumL *= ampEnvOut * synthParams.masterGain;
-    oscSumR *= ampEnvOut * synthParams.masterGain;
+    oscSumL *= ampEnvOut;
+    oscSumR *= ampEnvOut;
     
     // Process filter
     float filteredL, filteredR;

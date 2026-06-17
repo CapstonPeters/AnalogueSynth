@@ -715,6 +715,10 @@ private:
     float ampVelSens = 0.5f;
     float filtVelSens = 0.0f;
     
+    // Mod Matrix (copied from params)
+    ModMatrix modMatrix;
+    float filtAmount = 0.5f;
+    
     // Oscillators
     std::array<Oscillator, 3> oscillators;
     Oscillator subOsc;
