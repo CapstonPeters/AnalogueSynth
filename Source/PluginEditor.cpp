@@ -157,28 +157,35 @@ struct KnobGroup
     void setup(const juce::String& paramID, juce::AudioProcessorValueTreeState& apvts,
                float min, float max, float interval, float def,
                const juce::String& labelText, const juce::String& suffix,
-               juce::Component* parent)
-    {
-        if (parent) parent->addAndMakeVisible(slider);
-        styleKnob(slider, suffix);
-        slider.setRange(min, max, interval);
-        slider.setValue(def);
-        
-        if (parent) parent->addAndMakeVisible(label);
-        label.setText(labelText, juce::dontSendNotification);
-        label.setJustificationType(juce::Justification::centred);
-        label.setFont(10.0f);
-        label.setColour(juce::Label::textColourId, juce::Colour(0xFF888888));
-        
-        attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, paramID, slider);
-    }
+               juce::Component* parent);
     
-    void setBounds(juce::Rectangle<int> area, int knobSize, int labelHeight)
-    {
-        slider.setBounds(area.removeFromTop(knobSize).reduced(2));
-        label.setBounds(area.removeFromTop(labelHeight).reduced(2));
-    }
+    void setBounds(juce::Rectangle<int> area, int knobSize, int labelHeight);
 };
+
+void AnalogSynthAudioProcessorEditor::KnobGroup::setup(const juce::String& paramID, juce::AudioProcessorValueTreeState& apvts,
+                  float min, float max, float interval, float def,
+                  const juce::String& labelText, const juce::String& suffix,
+                  juce::Component* parent)
+{
+    if (parent) parent->addAndMakeVisible(slider);
+    styleKnob(slider, suffix);
+    slider.setRange(min, max, interval);
+    slider.setValue(def);
+    
+    if (parent) parent->addAndMakeVisible(label);
+    label.setText(labelText, juce::dontSendNotification);
+    label.setJustificationType(juce::Justification::centred);
+    label.setFont(10.0f);
+    label.setColour(juce::Label::textColourId, juce::Colour(0xFF888888));
+    
+    attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, paramID, slider);
+}
+
+void AnalogSynthAudioProcessorEditor::KnobGroup::setBounds(juce::Rectangle<int> area, int knobSize, int labelHeight)
+{
+    slider.setBounds(area.removeFromTop(knobSize).reduced(2));
+    label.setBounds(area.removeFromTop(labelHeight).reduced(2));
+}
 
 //==============================================================================
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
