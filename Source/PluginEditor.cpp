@@ -1,481 +1,488 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 
-// Helper function for creating rotary sliders
-static void setupRotarySlider(juce::Slider& slider, juce::Label& label, const juce::String& paramID,
-                              juce::AudioProcessorValueTreeState& apvts,
-                              std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>& attachment,
-                              float min, float max, float interval, float defaultVal,
-                              const juce::String& labelText, juce::Component* parent)
+//==============================================================================
+// Custom LookAndFeel
+class SynthLookAndFeel : public juce::LookAndFeel_V4
 {
-    parent->addAndMakeVisible(slider);
+public:
+    SynthLookAndFeel()
+    {
+        setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xFF00D4AA));
+        setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xFF333344));
+        setColour(juce::Slider::thumbColourId, juce::Colours::white);
+        setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xFF252535));
+        setColour(juce::ComboBox::outlineColourId, juce::Colour(0xFF333344));
+        setColour(juce::ComboBox::textColourId, juce::Colours::white);
+        setColour(juce::Label::textColourId, juce::Colour(0xFFBBBBBB));
+        setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF2ECC71));
+        setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFFE74C3C));
+        setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    }
+    
+    void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
+                          float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
+                          juce::Slider& slider) override
+    {
+        auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(4);
+        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
+        auto centre = bounds.getCentre();
+        
+        g.setColour(juce::Colour(0xFF1A1A2A));
+        g.fillEllipse(bounds);
+        
+        g.setColour(juce::Colour(0xFF333344));
+        g.drawEllipse(bounds, 2.0f);
+        
+        auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+        juce::Path arc;
+        arc.addCentredArc(centre.x, centre.y, radius - 6, radius - 6, 0.0f,
+                          rotaryStartAngle, angle, true);
+        
+        g.setColour(findColour(juce::Slider::rotarySliderFillColourId).withAlpha(0.8f));
+        g.strokePath(arc, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        
+        juce::Path indicator;
+        indicator.addRectangle(-2.0f, -radius + 8, 4.0f, radius - 16);
+        g.setColour(juce::Colours::white);
+        g.fillPath(indicator, juce::AffineTransform::rotation(angle).translated(centre));
+        
+        g.setColour(juce::Colour(0xFF1A1A2A));
+        g.fillEllipse(centre.x - 6, centre.y - 6, 12, 12);
+        g.setColour(juce::Colour(0xFF333344));
+        g.drawEllipse(centre.x - 6, centre.y - 6, 12, 12, 1.5f);
+    }
+    
+    juce::Label* createSliderTextBox(juce::Slider& slider) override
+    {
+        auto l = LookAndFeel_V4::createSliderTextBox(slider);
+        l->setColour(juce::Label::outlineColourId, juce::Colour(0x00000000));
+        l->setColour(juce::Label::backgroundColourId, juce::Colour(0x801A1A2A));
+        l->setFont(11.0f);
+        l->setJustificationType(juce::Justification::centred);
+        return l;
+    }
+    
+    void drawComboBox(juce::Graphics& g, int width, int height, bool,
+                      int buttonX, int buttonY, int buttonW, int buttonH,
+                      juce::ComboBox& box) override
+    {
+        juce::Rectangle<int> boxBounds(0, 0, width, height);
+        g.setColour(findColour(juce::ComboBox::backgroundColourId));
+        g.fillRoundedRectangle(boxBounds.toFloat(), 4.0f);
+        g.setColour(findColour(juce::ComboBox::outlineColourId));
+        g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f), 4.0f, 1.5f);
+        
+        juce::Path arrow;
+        arrow.addTriangle(0, 0, 6, 0, 3, 4);
+        g.setColour(findColour(juce::ComboBox::textColourId));
+        g.fillPath(arrow, juce::AffineTransform::translation(width - buttonW + (buttonW - 6) / 2.0f,
+                                                              (height - 4) / 2.0f));
+    }
+};
+
+static SynthLookAndFeel synthLookAndFeel;
+
+//==============================================================================
+// Helpers
+static void styleKnob(juce::Slider& slider, const juce::String& suffix = "")
+{
+    slider.setLookAndFeel(&synthLookAndFeel);
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 18);
-    slider.setRange(min, max, interval);
-    slider.setValue(defaultVal);
-    
-    parent->addAndMakeVisible(label);
-    label.setText(labelText, juce::dontSendNotification);
-    label.setJustificationType(juce::Justification::centred);
-    label.setFont(10.0f);
-    
-    attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, paramID, slider);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 54, 20);
+    slider.setTextValueSuffix(suffix);
+    slider.setDoubleClickReturnValue(true);
 }
 
-// Helper for combo boxes
-static void setupComboBox(juce::ComboBox& combo, const juce::String& paramID,
-                          juce::AudioProcessorValueTreeState& apvts,
-                          std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>& attachment,
-                          const juce::StringArray& choices, int defaultIdx,
-                          juce::Component* parent)
+static void styleCombo(juce::ComboBox& combo)
 {
-    parent->addAndMakeVisible(combo);
+    combo.setLookAndFeel(&synthLookAndFeel);
+}
+
+static void setupCombo(juce::ComboBox& combo, const juce::String& paramID,
+                        juce::AudioProcessorValueTreeState& apvts,
+                        std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>& attachment,
+                        const juce::StringArray& choices, int defaultIdx,
+                        juce::Component* parent)
+{
+    if (parent) parent->addAndMakeVisible(combo);
+    styleCombo(combo);
     for (int i = 0; i < choices.size(); ++i) combo.addItem(choices[i], i + 1);
     combo.setSelectedId(defaultIdx + 1);
-    
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, paramID, combo);
 }
 
-AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p), apvts (p.getAPVTS()),
-      testToneButton ("Test Tone"), waveTypeComboBox()
+//==============================================================================
+// Section Panel
+class SectionPanel : public juce::Component
 {
-    setSize (1000, 700);
+public:
+    SectionPanel(const juce::String& title, juce::Colour accentColour)
+        : titleText(title), accent(accentColour) {}
+    
+    void paint(juce::Graphics& g) override
+    {
+        auto bounds = getLocalBounds().toFloat();
+        juce::ColourGradient gradient(juce::Colour(0xFF222232), bounds.getTopLeft(),
+                                      juce::Colour(0xFF1A1A25), bounds.getBottomLeft(), false);
+        g.setGradientFill(gradient);
+        g.fillRoundedRectangle(bounds.reduced(1), 8.0f);
+        
+        g.setColour(accent);
+        g.fillRect(bounds.removeFromTop(2).reduced(2, 1), 8.0f);
+        
+        g.setColour(juce::Colour(0xFF2A2A3A));
+        g.drawRoundedRectangle(bounds.reduced(0.5f), 8.0f, 1.0f);
+        
+        g.setColour(accent);
+        g.setFont(juce::Font(13.0f, juce::Font::bold));
+        g.drawText(titleText, getLocalBounds().removeFromTop(28).reduced(12, 0),
+                   juce::Justification::centredLeft);
+    }
+    
+private:
+    juce::String titleText;
+    juce::Colour accent;
+};
+
+//==============================================================================
+// Knob Group
+struct KnobGroup
+{
+    juce::Slider slider;
+    juce::Label label;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+    
+    void setup(const juce::String& paramID, juce::AudioProcessorValueTreeState& apvts,
+               float min, float max, float interval, float def,
+               const juce::String& labelText, const juce::String& suffix,
+               juce::Component* parent)
+    {
+        if (parent) parent->addAndMakeVisible(slider);
+        styleKnob(slider, suffix);
+        slider.setRange(min, max, interval);
+        slider.setValue(def);
+        
+        if (parent) parent->addAndMakeVisible(label);
+        label.setText(labelText, juce::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+        label.setFont(10.0f);
+        label.setColour(juce::Label::textColourId, juce::Colour(0xFF888888));
+        
+        attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, paramID, slider);
+    }
+    
+    void setBounds(juce::Rectangle<int> area, int knobSize, int labelHeight)
+    {
+        slider.setBounds(area.removeFromTop(knobSize).reduced(2));
+        label.setBounds(area.removeFromTop(labelHeight).reduced(2));
+    }
+};
+
+//==============================================================================
+AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
+    : AudioProcessorEditor (&p), processorRef (p), apvts (p.getAPVTS())
+{
+    setSize (1100, 780);
     setResizable (true, true);
     
-    // === TOP BAR: Test Tone + Global Wave Type + Master Controls ===
+    // === TOP BAR ===
     addAndMakeVisible(testToneButton);
-    testToneButton.setButtonText("Test Tone (A4)");
-    testToneButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF2ECC71));
-    testToneButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFFE74C3C));
+    testToneButton.setButtonText("Test Tone A4");
     testToneButton.setClickingTogglesState(true);
     testToneButton.onClick = [this]()
     {
         processorRef.setTestToneActive(testToneButton.getToggleState());
-        testToneButton.setButtonText(testToneButton.getToggleState() ? "Stop Tone" : "Test Tone (A4)");
-        testToneButton.setColour(juce::TextButton::buttonColourId, testToneButton.getToggleState() ? juce::Colour(0xFFE74C3C) : juce::Colour(0xFF2ECC71));
+        testToneButton.setButtonText(testToneButton.getToggleState() ? "Stop Tone" : "Test Tone A4");
         repaint();
     };
     
-    setupComboBox(waveTypeComboBox, "osc1Wave", apvts, waveTypeAttachment,
-                  {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this);
-    waveTypeComboBox.setTooltip("Global wave type for quick testing (controls Osc 1)");
+    waveTypeComboBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Noise"}, 1);
+    waveTypeComboBox.setSelectedId(3);
+    waveTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "osc1Wave", waveTypeComboBox);
     
-    // Global controls
-    setupRotarySlider(masterGainSlider, masterGainLabel, "masterGain", apvts, masterGainAtt,
-                      0.0f, 1.0f, 0.01f, 0.5f, "Gain", this);
-    setupRotarySlider(polyphonySlider, polyphonyLabel, "polyphony", apvts, polyphonyAtt,
-                      1.0f, 16.0f, 1.0f, 8.0f, "Voices", this);
-    setupRotarySlider(pitchBendRangeSlider, pitchBendRangeLabel, "pitchBendRange", apvts, pitchBendRangeAtt,
-                      0.0f, 24.0f, 0.5f, 2.0f, "PB Range", this);
+    // Global knobs
+    masterGainKnob.setup("masterGain", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "GAIN", " dB", this);
+    polyphonyKnob.setup("polyphony", apvts, 1.0f, 16.0f, 1.0f, 8.0f, "VOICES", "", this);
+    pitchBendKnob.setup("pitchBendRange", apvts, 0.0f, 24.0f, 0.5f, 2.0f, "PB RANGE", " st", this);
     
-    // === OSCILLATOR SECTION ===
-    // Osc 1
-    setupComboBox(osc1WaveCombo, "osc1Wave", apvts, osc1WaveAtt,
-                  {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this);
-    setupRotarySlider(osc1LevelSlider, osc1LevelLabel, "osc1Level", apvts, osc1LevelAtt,
-                      0.0f, 1.0f, 0.01f, 0.7f, "Level", this);
-    setupRotarySlider(osc1PitchSlider, osc1PitchLabel, "osc1Pitch", apvts, osc1PitchAtt,
-                      -24.0f, 24.0f, 1.0f, 0.0f, "Pitch", this);
-    setupRotarySlider(osc1FineSlider, osc1FineLabel, "osc1FineTune", apvts, osc1FineAtt,
-                      -50.0f, 50.0f, 1.0f, 0.0f, "Fine", this);
-    setupRotarySlider(osc1PanSlider, osc1PanLabel, "osc1Pan", apvts, osc1PanAtt,
-                      -1.0f, 1.0f, 0.01f, 0.0f, "Pan", this);
-    setupRotarySlider(osc1UnisonSlider, osc1UnisonLabel, "osc1Unison", apvts, osc1UnisonAtt,
-                      1.0f, 8.0f, 1.0f, 1.0f, "Unison", this);
-    setupRotarySlider(osc1DetuneSlider, osc1DetuneLabel, "osc1Detune", apvts, osc1DetuneAtt,
-                      0.0f, 50.0f, 1.0f, 0.0f, "Detune", this);
-    setupRotarySlider(osc1PWSlder, osc1PWLabel, "osc1PulseWidth", apvts, osc1PWAtt,
-                      0.01f, 0.99f, 0.01f, 0.5f, "PW", this);
+    // === OSCILLATORS ===
+    setupCombo(osc1Wave, "osc1Wave", apvts, osc1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this);
+    osc1Level.setup("osc1Level", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "LEVEL", "", this);
+    osc1Pitch.setup("osc1Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this);
+    osc1Fine.setup("osc1FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this);
+    osc1Pan.setup("osc1Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this);
+    osc1Unison.setup("osc1Unison", apvts, 1.0f, 8.0f, 1.0f, 1.0f, "UNISON", "", this);
+    osc1Detune.setup("osc1Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this);
+    osc1PW.setup("osc1PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this);
     
-    // Osc 2
-    setupComboBox(osc2WaveCombo, "osc2Wave", apvts, osc2WaveAtt,
-                  {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this);
-    setupRotarySlider(osc2LevelSlider, osc2LevelLabel, "osc2Level", apvts, osc2LevelAtt,
-                      0.0f, 1.0f, 0.01f, 0.5f, "Level", this);
-    setupRotarySlider(osc2PitchSlider, osc2PitchLabel, "osc2Pitch", apvts, osc2PitchAtt,
-                      -24.0f, 24.0f, 1.0f, 0.0f, "Pitch", this);
-    setupRotarySlider(osc2FineSlider, osc2FineLabel, "osc2FineTune", apvts, osc2FineAtt,
-                      -50.0f, 50.0f, 1.0f, 0.0f, "Fine", this);
-    setupRotarySlider(osc2PanSlider, osc2PanLabel, "osc2Pan", apvts, osc2PanAtt,
-                      -1.0f, 1.0f, 0.01f, 0.0f, "Pan", this);
-    setupRotarySlider(osc2UnisonSlider, osc2UnisonLabel, "osc2Unison", apvts, osc2UnisonAtt,
-                      1.0f, 8.0f, 1.0f, 1.0f, "Unison", this);
-    setupRotarySlider(osc2DetuneSlider, osc2DetuneLabel, "osc2Detune", apvts, osc2DetuneAtt,
-                      0.0f, 50.0f, 1.0f, 0.0f, "Detune", this);
-    setupRotarySlider(osc2PWSlder, osc2PWLabel, "osc2PulseWidth", apvts, osc2PWAtt,
-                      0.01f, 0.99f, 0.01f, 0.5f, "PW", this);
+    setupCombo(osc2Wave, "osc2Wave", apvts, osc2WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this);
+    osc2Level.setup("osc2Level", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "LEVEL", "", this);
+    osc2Pitch.setup("osc2Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this);
+    osc2Fine.setup("osc2FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this);
+    osc2Pan.setup("osc2Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this);
+    osc2Unison.setup("osc2Unison", apvts, 1.0f, 8.0f, 1.0f, 1.0f, "UNISON", "", this);
+    osc2Detune.setup("osc2Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this);
+    osc2PW.setup("osc2PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this);
     
-    // Osc 3
-    setupComboBox(osc3WaveCombo, "osc3Wave", apvts, osc3WaveAtt,
-                  {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this);
-    setupRotarySlider(osc3LevelSlider, osc3LevelLabel, "osc3Level", apvts, osc3LevelAtt,
-                      0.0f, 1.0f, 0.01f, 0.3f, "Level", this);
-    setupRotarySlider(osc3PitchSlider, osc3PitchLabel, "osc3Pitch", apvts, osc3PitchAtt,
-                      -24.0f, 24.0f, 1.0f, 0.0f, "Pitch", this);
-    setupRotarySlider(osc3FineSlider, osc3FineLabel, "osc3FineTune", apvts, osc3FineAtt,
-                      -50.0f, 50.0f, 1.0f, 0.0f, "Fine", this);
-    setupRotarySlider(osc3PanSlider, osc3PanLabel, "osc3Pan", apvts, osc3PanAtt,
-                      -1.0f, 1.0f, 0.01f, 0.0f, "Pan", this);
-    setupRotarySlider(osc3UnisonSlider, osc3UnisonLabel, "osc3Unison", apvts, osc3UnisonAtt,
-                      1.0f, 8.0f, 1.0f, 1.0f, "Unison", this);
-    setupRotarySlider(osc3DetuneSlider, osc3DetuneLabel, "osc3Detune", apvts, osc3DetuneAtt,
-                      0.0f, 50.0f, 1.0f, 0.0f, "Detune", this);
-    setupRotarySlider(osc3PWSlder, osc3PWLabel, "osc3PulseWidth", apvts, osc3PWAtt,
-                      0.01f, 0.99f, 0.01f, 0.5f, "PW", this);
+    setupCombo(osc3Wave, "osc3Wave", apvts, osc3WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this);
+    osc3Level.setup("osc3Level", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "LEVEL", "", this);
+    osc3Pitch.setup("osc3Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this);
+    osc3Fine.setup("osc3FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this);
+    osc3Pan.setup("osc3Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this);
+    osc3Unison.setup("osc3Unison", apvts, 1.0f, 8.0f, 1.0f, 1.0f, "UNISON", "", this);
+    osc3Detune.setup("osc3Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this);
+    osc3PW.setup("osc3PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this);
     
-    // Sub
-    setupComboBox(subWaveCombo, "subWave", apvts, subWaveAtt,
-                  {"Sine", "Square"}, 0, this);
-    setupRotarySlider(subLevelSlider, subLabel, "subLevel", apvts, subLevelAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Sub Level", this);
-    setupRotarySlider(subPitchSlider, subLabel, "subPitch", apvts, subPitchAtt,
-                      -24.0f, 0.0f, 1.0f, -12.0f, "Sub Pitch", this);
+    setupCombo(subWave, "subWave", apvts, subWaveAtt, {"Sine", "Square"}, 0, this);
+    subLevel.setup("subLevel", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SUB LEVEL", "", this);
+    subPitch.setup("subPitch", apvts, -24.0f, 0.0f, 1.0f, -12.0f, "SUB PITCH", " st", this);
     
-    // Noise
-    setupComboBox(noiseWaveCombo, "noiseType", apvts, noiseWaveAtt,
-                  {"White", "Pink"}, 0, this);
-    setupRotarySlider(noiseLevelSlider, noiseLabel, "noiseLevel", apvts, noiseLevelAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Noise Level", this);
+    setupCombo(noiseWave, "noiseType", apvts, noiseWaveAtt, {"White", "Pink"}, 0, this);
+    noiseLevel.setup("noiseLevel", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "NOISE LEVEL", "", this);
     
-    // Labels for oscillator section
-    addAndMakeVisible(osc1Label); osc1Label.setText("OSC 1", juce::dontSendNotification); osc1Label.setJustificationType(juce::Justification::centred); osc1Label.setColour(juce::Label::textColourId, juce::Colour(0xFF00D4AA)); osc1Label.setFont(12.0f);
-    addAndMakeVisible(osc2Label); osc2Label.setText("OSC 2", juce::dontSendNotification); osc2Label.setJustificationType(juce::Justification::centred); osc2Label.setColour(juce::Label::textColourId, juce::Colour(0xFF00D4AA)); osc2Label.setFont(12.0f);
-    addAndMakeVisible(osc3Label); osc3Label.setText("OSC 3", juce::dontSendNotification); osc3Label.setJustificationType(juce::Justification::centred); osc3Label.setColour(juce::Label::textColourId, juce::Colour(0xFF00D4AA)); osc3Label.setFont(12.0f);
-    addAndMakeVisible(subLabel); subLabel.setText("SUB", juce::dontSendNotification); subLabel.setJustificationType(juce::Justification::centred); subLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF00D4AA)); subLabel.setFont(12.0f);
-    addAndMakeVisible(noiseLabel); noiseLabel.setText("NOISE", juce::dontSendNotification); noiseLabel.setJustificationType(juce::Justification::centred); noiseLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF00D4AA)); noiseLabel.setFont(12.0f);
+    // === FILTER ===
+    setupCombo(filterType, "filterType", apvts, filterTypeAtt, {"LP 4-Pole", "LP 2-Pole", "HP 4-Pole", "HP 2-Pole", "Bandpass", "Notch"}, 0, this);
+    filterCutoff.setup("filterCutoff", apvts, 20.0f, 20000.0f, 1.0f, 1000.0f, "CUTOFF", " Hz", this);
+    filterReso.setup("filterResonance", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "RESO", "", this);
+    filterDrive.setup("filterDrive", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "DRIVE", "", this);
+    filterKeyTrk.setup("filterKeyTrack", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "KEY TRK", "", this);
+    filterVelTrk.setup("filterVelTrack", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "VEL TRK", "", this);
     
-    // === FILTER SECTION ===
-    setupComboBox(filterTypeCombo, "filterType", apvts, filterTypeAtt,
-                  {"LP 4-Pole", "LP 2-Pole", "HP 4-Pole", "HP 2-Pole", "Bandpass", "Notch"}, 0, this);
-    setupRotarySlider(cutoffSlider, cutoffLabel, "filterCutoff", apvts, cutoffAtt,
-                      20.0f, 20000.0f, 1.0f, 1000.0f, "Cutoff", this);
-    setupRotarySlider(resonanceSlider, resonanceLabel, "filterResonance", apvts, resonanceAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Reso", this);
-    setupRotarySlider(driveSlider, driveLabel, "filterDrive", apvts, driveAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Drive", this);
-    setupRotarySlider(keyTrackSlider, keyTrackLabel, "filterKeyTrack", apvts, keyTrackAtt,
-                      -1.0f, 1.0f, 0.01f, 0.0f, "KeyTrk", this);
-    setupRotarySlider(velTrackSlider, velTrackLabel, "filterVelTrack", apvts, velTrackAtt,
-                      -1.0f, 1.0f, 0.01f, 0.0f, "VelTrk", this);
+    // === AMP ENV ===
+    ampAtt.setup("ampAttack", apvts, 0.001f, 10.0f, 0.001f, 0.01f, "ATT", " s", this);
+    ampDec.setup("ampDecay", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC", " s", this);
+    ampSus.setup("ampSustain", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "SUS", "", this);
+    ampRel.setup("ampRelease", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL", " s", this);
+    ampVel.setup("ampVelSens", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "VEL", "", this);
     
-    addAndMakeVisible(filterLabel); filterLabel.setText("FILTER", juce::dontSendNotification); filterLabel.setJustificationType(juce::Justification::centred); filterLabel.setColour(juce::Label::textColourId, juce::Colour(0xFFFF8844)); filterLabel.setFont(12.0f);
+    // === FILT ENV ===
+    filtAtt.setup("filtAttack", apvts, 0.001f, 10.0f, 0.001f, 0.01f, "ATT", " s", this);
+    filtDec.setup("filtDecay", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC", " s", this);
+    filtSus.setup("filtSustain", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SUS", "", this);
+    filtRel.setup("filtRelease", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL", " s", this);
+    filtAmt.setup("filtAmount", apvts, -1.0f, 1.0f, 0.01f, 0.5f, "AMT", "", this);
+    filtVel.setup("filtVelSens", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "VEL", "", this);
     
-    // === AMP ENVELOPE ===
-    setupRotarySlider(ampAttackSlider, ampAttackLabel, "ampAttack", apvts, ampAttackAtt,
-                      0.001f, 10.0f, 0.001f, 0.01f, "Att", this);
-    setupRotarySlider(ampDecaySlider, ampDecayLabel, "ampDecay", apvts, ampDecayAtt,
-                      0.001f, 10.0f, 0.001f, 0.3f, "Dec", this);
-    setupRotarySlider(ampSustainSlider, ampSustainLabel, "ampSustain", apvts, ampSustainAtt,
-                      0.0f, 1.0f, 0.01f, 0.7f, "Sus", this);
-    setupRotarySlider(ampReleaseSlider, ampReleaseLabel, "ampRelease", apvts, ampReleaseAtt,
-                      0.001f, 10.0f, 0.001f, 0.3f, "Rel", this);
-    setupRotarySlider(ampVelSensSlider, ampVelSensLabel, "ampVelSens", apvts, ampVelSensAtt,
-                      0.0f, 1.0f, 0.01f, 0.5f, "Vel", this);
+    // === LFOs ===
+    setupCombo(lfo1Wave, "lfo1Wave", apvts, lfo1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "S&H"}, 0, this);
+    lfo1Rate.setup("lfo1Rate", apvts, 0.01f, 20.0f, 0.01f, 1.0f, "RATE", " Hz", this);
+    lfo1Amt.setup("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "AMT", "", this);
+    lfo1Delay.setup("lfo1Delay", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "DELAY", " s", this);
+    lfo1Fade.setup("lfo1Fade", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "FADE", " s", this);
     
-    addAndMakeVisible(ampAttackLabel); ampAttackLabel.setText("AMP ENV", juce::dontSendNotification); ampAttackLabel.setJustificationType(juce::Justification::centred); ampAttackLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF88AAFF)); ampAttackLabel.setFont(12.0f);
+    setupCombo(lfo2Wave, "lfo2Wave", apvts, lfo2WaveAtt, {"Sine", "Triangle", "Saw", "Square", "S&H"}, 1, this);
+    lfo2Rate.setup("lfo2Rate", apvts, 0.01f, 20.0f, 0.01f, 5.0f, "RATE", " Hz", this);
+    lfo2Amt.setup("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "AMT", "", this);
+    lfo2Delay.setup("lfo2Delay", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "DELAY", " s", this);
+    lfo2Fade.setup("lfo2Fade", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "FADE", " s", this);
     
-    // === FILTER ENVELOPE ===
-    setupRotarySlider(filtAttackSlider, filtAttackLabel, "filtAttack", apvts, filtAttackAtt,
-                      0.001f, 10.0f, 0.001f, 0.01f, "Att", this);
-    setupRotarySlider(filtDecaySlider, filtDecayLabel, "filtDecay", apvts, filtDecayAtt,
-                      0.001f, 10.0f, 0.001f, 0.3f, "Dec", this);
-    setupRotarySlider(filtSustainSlider, filtSustainLabel, "filtSustain", apvts, filtSustainAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Sus", this);
-    setupRotarySlider(filtReleaseSlider, filtReleaseLabel, "filtRelease", apvts, filtReleaseAtt,
-                      0.001f, 10.0f, 0.001f, 0.3f, "Rel", this);
-    setupRotarySlider(filtAmountSlider, filtAmountLabel, "filtAmount", apvts, filtAmountAtt,
-                      -1.0f, 1.0f, 0.01f, 0.5f, "Amt", this);
-    setupRotarySlider(filtVelSensSlider, filtVelSensLabel, "filtVelSens", apvts, filtVelSensAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Vel", this);
-    
-    addAndMakeVisible(filtAttackLabel); filtAttackLabel.setText("FILT ENV", juce::dontSendNotification); filtAttackLabel.setJustificationType(juce::Justification::centred); filtAttackLabel.setColour(juce::Label::textColourId, juce::Colour(0xFFAA88FF)); filtAttackLabel.setFont(12.0f);
-    
-    // === LFO 1 ===
-    setupComboBox(lfo1WaveCombo, "lfo1Wave", apvts, lfo1WaveAtt,
-                  {"Sine", "Triangle", "Saw", "Square", "S&H"}, 0, this);
-    setupRotarySlider(lfo1RateSlider, lfo1RateLabel, "lfo1Rate", apvts, lfo1RateAtt,
-                      0.01f, 20.0f, 0.01f, 1.0f, "Rate", this);
-    setupRotarySlider(lfo1AmountSlider, lfo1AmountLabel, "lfo1Amount", apvts, lfo1AmountAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Amt", this);
-    setupRotarySlider(lfo1DelaySlider, lfo1DelayLabel, "lfo1Delay", apvts, lfo1DelayAtt,
-                      0.0f, 5.0f, 0.01f, 0.0f, "Delay", this);
-    setupRotarySlider(lfo1FadeSlider, lfo1FadeLabel, "lfo1Fade", apvts, lfo1FadeAtt,
-                      0.0f, 5.0f, 0.01f, 0.0f, "Fade", this);
-    
-    addAndMakeVisible(lfo1Label); lfo1Label.setText("LFO 1", juce::dontSendNotification); lfo1Label.setJustificationType(juce::Justification::centred); lfo1Label.setColour(juce::Label::textColourId, juce::Colour(0xFFFFAA88)); lfo1Label.setFont(12.0f);
-    
-    // === LFO 2 ===
-    setupComboBox(lfo2WaveCombo, "lfo2Wave", apvts, lfo2WaveAtt,
-                  {"Sine", "Triangle", "Saw", "Square", "S&H"}, 1, this);
-    setupRotarySlider(lfo2RateSlider, lfo2RateLabel, "lfo2Rate", apvts, lfo2RateAtt,
-                      0.01f, 20.0f, 0.01f, 5.0f, "Rate", this);
-    setupRotarySlider(lfo2AmountSlider, lfo2AmountLabel, "lfo2Amount", apvts, lfo2AmountAtt,
-                      0.0f, 1.0f, 0.01f, 0.0f, "Amt", this);
-    setupRotarySlider(lfo2DelaySlider, lfo2DelayLabel, "lfo2Delay", apvts, lfo2DelayAtt,
-                      0.0f, 5.0f, 0.01f, 0.0f, "Delay", this);
-    setupRotarySlider(lfo2FadeSlider, lfo2FadeLabel, "lfo2Fade", apvts, lfo2FadeAtt,
-                      0.0f, 5.0f, 0.01f, 0.0f, "Fade", this);
-    
-    addAndMakeVisible(lfo2Label); lfo2Label.setText("LFO 2", juce::dontSendNotification); lfo2Label.setJustificationType(juce::Justification::centred); lfo2Label.setColour(juce::Label::textColourId, juce::Colour(0xFFFFAA88)); lfo2Label.setFont(12.0f);
-    
-    // === MOD MATRIX ===
-    addAndMakeVisible(modMatrixLabel);
-    modMatrixLabel.setText("MOD MATRIX (8 slots) - Configure via right-click menu or MIDI learn", juce::dontSendNotification);
-    modMatrixLabel.setJustificationType(juce::Justification::centred);
-    modMatrixLabel.setColour(juce::Label::textColourId, juce::Colours::grey);
-    modMatrixLabel.setFont(11.0f);
+    // Section panels
+    addAndMakeVisible(oscPanel);
+    addAndMakeVisible(filterPanel);
+    addAndMakeVisible(ampEnvPanel);
+    addAndMakeVisible(filtEnvPanel);
+    addAndMakeVisible(lfoPanel);
+    addAndMakeVisible(modPanel);
 }
 
-AnalogSynthAudioProcessorEditor::~AnalogSynthAudioProcessorEditor() = default;
-
-void AnalogSynthAudioProcessorEditor::paint (juce::Graphics& g)
+AnalogSynthAudioProcessorEditor::~AnalogSynthAudioProcessorEditor()
 {
-    g.fillAll (juce::Colour(0xFF1E1E2E));
+    setLookAndFeel(nullptr);
+}
+
+void AnalogSynthAudioProcessorEditor::paint(juce::Graphics& g)
+{
+    g.fillAll(juce::Colour(0xFF15151E));
     
-    auto bounds = getLocalBounds();
-    auto headerArea = bounds.removeFromTop(50);
+    auto header = getLocalBounds().removeFromTop(56);
+    g.setColour(juce::Colour(0xFF1A1A25));
+    g.fillRect(header);
+    g.setColour(juce::Colour(0xFF2A2A3A));
+    g.drawLine(0, header.getBottom(), getWidth(), header.getBottom(), 1.0f);
     
-    // Header
-    g.setColour (juce::Colours::white);
-    g.setFont (24.0f);
-    g.drawText ("AnalogSynth", headerArea.removeFromLeft(200), juce::Justification::centredLeft);
+    g.setColour(juce::Colours::white);
+    g.setFont(juce::Font(20.0f, juce::Font::bold));
+    g.drawText("AnalogSynth", header.removeFromLeft(180).reduced(16, 0), juce::Justification::centredLeft);
     
-    // Test tone status
-    g.setFont (12.0f);
-    g.setColour (juce::Colour(0xFF888888));
-    g.drawText (processorRef.isTestToneActive() ? "TEST TONE: ON" : "TEST TONE: OFF", headerArea.removeFromRight(200), juce::Justification::centredRight);
-    
-    // Section dividers
-    g.setColour (juce::Colour(0xFF333344));
-    for (int y : {150, 320, 420, 520, 620})
-        g.drawLine(10, y, getWidth() - 10, y, 1.0f);
+    g.setFont(11.0f);
+    g.setColour(juce::Colour(0xFF666677));
+    auto statusArea = header.removeFromRight(300);
+    g.drawText(processorRef.isTestToneActive() ? "● TEST ACTIVE" : "○ TEST READY", 
+               statusArea.reduced(16, 0), juce::Justification::centredRight);
 }
 
 void AnalogSynthAudioProcessorEditor::resized()
 {
-    auto bounds = getLocalBounds().reduced(10);
-    const int knobSize = 64;
-    const int knobGap = 4;
-    const int labelHeight = 18;
-    const int comboHeight = 24;
-    const int sectionGap = 10;
+    auto bounds = getLocalBounds().reduced(12);
+    const int knobSize = 58;
+    const int labelH = 16;
+    const int comboH = 28;
+    const int sectionGap = 8;
     
-    // === TOP BAR ===
-    auto topBar = bounds.removeFromTop(50);
-    testToneButton.setBounds(topBar.removeFromLeft(100).reduced(5));
-    waveTypeComboBox.setBounds(topBar.removeFromRight(120).reduced(5));
+    // Header
+    auto headerBar = bounds.removeFromTop(56);
+    testToneButton.setBounds(headerBar.removeFromLeft(110).reduced(6));
+    headerBar.removeFromLeft(12);
+    waveTypeComboBox.setBounds(headerBar.removeFromLeft(120).reduced(4).withHeight(comboH).withY(12));
     
-    auto globalArea = topBar.reduced(20, 5);
-    masterGainSlider.setBounds(globalArea.removeFromLeft(knobSize).reduced(2));
-    masterGainLabel.setBounds(globalArea.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(masterGainSlider.getBottom()));
-    polyphonySlider.setBounds(globalArea.removeFromLeft(knobSize).reduced(2));
-    polyphonyLabel.setBounds(globalArea.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(polyphonySlider.getBottom()));
-    pitchBendRangeSlider.setBounds(globalArea.removeFromLeft(knobSize).reduced(2));
-    pitchBendRangeLabel.setBounds(globalArea.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(pitchBendRangeSlider.getBottom()));
-    
-    bounds.removeFromTop(sectionGap);
-    
-    // === OSCILLATORS ROW ===
-    auto oscSection = bounds.removeFromTop(160);
-    oscSection.removeFromTop(20); // Section label space
-    
-    auto oscRow = oscSection.reduced(10, 5);
-    const int oscColWidth = (oscRow.getWidth() - 4 * knobGap) / 5;
-    
-    // Osc 1 column
-    auto osc1Col = oscRow.removeFromLeft(oscColWidth);
-    osc1Label.setBounds(osc1Col.removeFromTop(20));
-    osc1WaveCombo.setBounds(osc1Col.removeFromTop(comboHeight).reduced(2));
-    auto osc1Knobs = osc1Col;
-    osc1Knobs.removeFromTop(2);
-    osc1LevelSlider.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2));
-    osc1LevelLabel.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc1LevelSlider.getBottom()));
-    osc1PitchSlider.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2));
-    osc1PitchLabel.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc1PitchSlider.getBottom()));
-    osc1FineSlider.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2));
-    osc1FineLabel.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc1FineSlider.getBottom()));
-    osc1PanSlider.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2));
-    osc1PanLabel.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc1PanSlider.getBottom()));
-    osc1UnisonSlider.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2));
-    osc1UnisonLabel.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc1UnisonSlider.getBottom()));
-    osc1DetuneSlider.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2));
-    osc1DetuneLabel.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc1DetuneSlider.getBottom()));
-    osc1PWSlder.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2));
-    osc1PWLabel.setBounds(osc1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc1PWSlder.getBottom()));
-    
-    oscRow.removeFromLeft(knobGap);
-    
-    // Osc 2 column
-    auto osc2Col = oscRow.removeFromLeft(oscColWidth);
-    osc2Label.setBounds(osc2Col.removeFromTop(20));
-    osc2WaveCombo.setBounds(osc2Col.removeFromTop(comboHeight).reduced(2));
-    auto osc2Knobs = osc2Col;
-    osc2Knobs.removeFromTop(2);
-    osc2LevelSlider.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2));
-    osc2LevelLabel.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc2LevelSlider.getBottom()));
-    osc2PitchSlider.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2));
-    osc2PitchLabel.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc2PitchSlider.getBottom()));
-    osc2FineSlider.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2));
-    osc2FineLabel.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc2FineSlider.getBottom()));
-    osc2PanSlider.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2));
-    osc2PanLabel.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc2PanSlider.getBottom()));
-    osc2UnisonSlider.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2));
-    osc2UnisonLabel.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc2UnisonSlider.getBottom()));
-    osc2DetuneSlider.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2));
-    osc2DetuneLabel.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc2DetuneSlider.getBottom()));
-    osc2PWSlder.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2));
-    osc2PWLabel.setBounds(osc2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc2PWSlder.getBottom()));
-    
-    oscRow.removeFromLeft(knobGap);
-    
-    // Osc 3 column
-    auto osc3Col = oscRow.removeFromLeft(oscColWidth);
-    osc3Label.setBounds(osc3Col.removeFromTop(20));
-    osc3WaveCombo.setBounds(osc3Col.removeFromTop(comboHeight).reduced(2));
-    auto osc3Knobs = osc3Col;
-    osc3Knobs.removeFromTop(2);
-    osc3LevelSlider.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2));
-    osc3LevelLabel.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc3LevelSlider.getBottom()));
-    osc3PitchSlider.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2));
-    osc3PitchLabel.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc3PitchSlider.getBottom()));
-    osc3FineSlider.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2));
-    osc3FineLabel.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc3FineSlider.getBottom()));
-    osc3PanSlider.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2));
-    osc3PanLabel.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc3PanSlider.getBottom()));
-    osc3UnisonSlider.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2));
-    osc3UnisonLabel.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc3UnisonSlider.getBottom()));
-    osc3DetuneSlider.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2));
-    osc3DetuneLabel.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc3DetuneSlider.getBottom()));
-    osc3PWSlder.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2));
-    osc3PWLabel.setBounds(osc3Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(osc3PWSlder.getBottom()));
-    
-    oscRow.removeFromLeft(knobGap);
-    
-    // Sub + Noise column
-    auto subCol = oscRow.removeFromLeft(oscColWidth);
-    subLabel.setBounds(subCol.removeFromTop(20));
-    subWaveCombo.setBounds(subCol.removeFromTop(comboHeight).reduced(2));
-    auto subKnobs = subCol;
-    subKnobs.removeFromTop(2);
-    // Sub level
-    subLevelSlider.setBounds(subKnobs.removeFromLeft(knobSize).reduced(2));
-    subLabel.setBounds(subKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(subLevelSlider.getBottom()));
-    subPitchSlider.setBounds(subKnobs.removeFromLeft(knobSize).reduced(2));
-    subLabel.setBounds(subKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(subPitchSlider.getBottom()));
-    
-    subCol.removeFromTop(10);
-    noiseLabel.setBounds(subCol.removeFromTop(20));
-    noiseWaveCombo.setBounds(subCol.removeFromTop(comboHeight).reduced(2));
-    auto noiseKnobs = subCol;
-    noiseKnobs.removeFromTop(2);
-    noiseLevelSlider.setBounds(noiseKnobs.removeFromLeft(knobSize).reduced(2));
-    noiseLabel.setBounds(noiseKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(noiseLevelSlider.getBottom()));
+    auto globalArea = headerBar.removeFromRight(220).reduced(4);
+    masterGainKnob.slider.setBounds(globalArea.removeFromLeft(70).reduced(2));
+    masterGainKnob.label.setBounds(globalArea.removeFromLeft(70).reduced(2).withHeight(labelH).withY(masterGainKnob.slider.getBottom()));
+    polyphonyKnob.slider.setBounds(globalArea.removeFromLeft(70).reduced(2));
+    polyphonyKnob.label.setBounds(globalArea.removeFromLeft(70).reduced(2).withHeight(labelH).withY(polyphonyKnob.slider.getBottom()));
+    pitchBendKnob.slider.setBounds(globalArea.removeFromLeft(70).reduced(2));
+    pitchBendKnob.label.setBounds(globalArea.removeFromLeft(70).reduced(2).withHeight(labelH).withY(pitchBendKnob.slider.getBottom()));
     
     bounds.removeFromTop(sectionGap);
     
-    // === FILTER SECTION ===
-    auto filtSection = bounds.removeFromTop(100);
-    filtSection.removeFromTop(20);
-    auto filtRow = filtSection.reduced(10, 5);
-    filterLabel.setBounds(filtRow.removeFromLeft(120).removeFromTop(20));
-    filterTypeCombo.setBounds(filtRow.removeFromLeft(120).removeFromTop(comboHeight).reduced(2));
+    // 2-column layout
+    auto leftCol = bounds.removeFromLeft((bounds.getWidth() * 3) / 5);
+    auto rightCol = bounds;
     
-    auto filtKnobs = filtRow;
-    cutoffSlider.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2));
-    cutoffLabel.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(cutoffSlider.getBottom()));
-    resonanceSlider.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2));
-    resonanceLabel.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(resonanceSlider.getBottom()));
-    driveSlider.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2));
-    driveLabel.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(driveSlider.getBottom()));
-    keyTrackSlider.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2));
-    keyTrackLabel.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(keyTrackSlider.getBottom()));
-    velTrackSlider.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2));
-    velTrackLabel.setBounds(filtKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(velTrackSlider.getBottom()));
+    // === LEFT: OSC + FILTER ===
+    auto oscArea = leftCol.removeFromTop(340);
+    oscPanel.setBounds(oscArea);
+    auto oscInner = oscArea.reduced(14, 34);
     
-    bounds.removeFromTop(sectionGap);
+    int oscColW = (oscInner.getWidth() - 4 * 6) / 5;
     
-    // === AMP ENVELOPE ===
-    auto ampSection = bounds.removeFromTop(100);
-    ampSection.removeFromTop(20);
-    auto ampRow = ampSection.reduced(10, 5);
-    ampAttackLabel.setBounds(ampRow.removeFromLeft(100).removeFromTop(20));
+    auto layoutOsc = [&](juce::ComboBox& wave, KnobGroup& level, KnobGroup& pitch, KnobGroup& fine,
+                         KnobGroup& pan, KnobGroup& unison, KnobGroup& detune, KnobGroup& pw,
+                         juce::Rectangle<int> col)
+    {
+        wave.setBounds(col.removeFromTop(comboH).reduced(2));
+        auto knobs = col.reduced(0, 2);
+        level.setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
+        pitch.setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
+        fine.setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
+        pan.setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
+        unison.setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
+        detune.setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
+        pw.setBounds(knobs.reduced(2), knobSize, labelH);
+    };
     
-    auto ampKnobs = ampRow;
-    ampAttackSlider.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2));
-    ampAttackLabel.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(ampAttackSlider.getBottom()));
-    ampDecaySlider.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2));
-    ampDecayLabel.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(ampDecaySlider.getBottom()));
-    ampSustainSlider.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2));
-    ampSustainLabel.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(ampSustainSlider.getBottom()));
-    ampReleaseSlider.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2));
-    ampReleaseLabel.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(ampReleaseSlider.getBottom()));
-    ampVelSensSlider.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2));
-    ampVelSensLabel.setBounds(ampKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(ampVelSensSlider.getBottom()));
+    auto osc1Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
+    layoutOsc(osc1Wave, osc1Level, osc1Pitch, osc1Fine, osc1Pan, osc1Unison, osc1Detune, osc1PW, osc1Area);
     
-    bounds.removeFromTop(sectionGap);
+    auto osc2Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
+    layoutOsc(osc2Wave, osc2Level, osc2Pitch, osc2Fine, osc2Pan, osc2Unison, osc2Detune, osc2PW, osc2Area);
     
-    // === FILTER ENVELOPE ===
-    auto feSection = bounds.removeFromTop(100);
-    feSection.removeFromTop(20);
-    auto feRow = feSection.reduced(10, 5);
-    filtAttackLabel.setBounds(feRow.removeFromLeft(100).removeFromTop(20));
+    auto osc3Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
+    layoutOsc(osc3Wave, osc3Level, osc3Pitch, osc3Fine, osc3Pan, osc3Unison, osc3Detune, osc3PW, osc3Area);
     
-    auto feKnobs = feRow;
-    filtAttackSlider.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2));
-    filtAttackLabel.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(filtAttackSlider.getBottom()));
-    filtDecaySlider.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2));
-    filtDecayLabel.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(filtDecaySlider.getBottom()));
-    filtSustainSlider.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2));
-    filtSustainLabel.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(filtSustainSlider.getBottom()));
-    filtReleaseSlider.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2));
-    filtReleaseLabel.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(filtReleaseSlider.getBottom()));
-    filtAmountSlider.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2));
-    filtAmountLabel.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(filtAmountSlider.getBottom()));
-    filtVelSensSlider.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2));
-    filtVelSensLabel.setBounds(feKnobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(filtVelSensSlider.getBottom()));
+    // Sub + Noise
+    auto subNoiseArea = oscInner; subNoiseArea.removeFromLeft(6);
+    subWave.setBounds(subNoiseArea.removeFromTop(comboH).reduced(2));
+    auto subKnobs = subNoiseArea.reduced(0, 4);
+    subLevel.setBounds(subKnobs.removeFromLeft(subKnobs.getWidth()/2).reduced(2), knobSize, labelH);
+    subPitch.setBounds(subKnobs.reduced(2), knobSize, labelH);
     
-    bounds.removeFromTop(sectionGap);
+    subNoiseArea.removeFromTop(2);
+    noiseWave.setBounds(subNoiseArea.removeFromTop(comboH).reduced(2));
+    noiseLevel.setBounds(subNoiseArea.reduced(2, knobSize).reduced(2), knobSize, labelH);
     
-    // === LFOs ===
-    auto lfoSection = bounds.removeFromTop(120);
-    lfoSection.removeFromTop(20);
-    auto lfoRow = lfoSection.reduced(10, 5);
-    const int lfoColWidth = lfoRow.getWidth() / 2;
+    // Filter
+    auto filtArea = leftCol.removeFromTop(170);
+    filterPanel.setBounds(filtArea);
+    auto filtInner = filtArea.reduced(14, 34);
     
-    // LFO 1
-    auto lfo1Col = lfoRow.removeFromLeft(lfoColWidth);
-    lfo1Label.setBounds(lfo1Col.removeFromTop(20));
-    lfo1WaveCombo.setBounds(lfo1Col.removeFromTop(comboHeight).reduced(2));
-    auto lfo1Knobs = lfo1Col;
-    lfo1Knobs.removeFromTop(2);
-    lfo1RateSlider.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo1RateLabel.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo1RateSlider.getBottom()));
-    lfo1AmountSlider.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo1AmountLabel.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo1AmountSlider.getBottom()));
-    lfo1DelaySlider.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo1DelayLabel.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo1DelaySlider.getBottom()));
-    lfo1FadeSlider.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo1FadeLabel.setBounds(lfo1Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo1FadeSlider.getBottom()));
+    int fkw = (filtInner.getWidth() - 4 * 6) / 5;
+    filterType.setBounds(filtInner.removeFromLeft(fkw + 20).removeFromTop(comboH).reduced(2));
+    auto fknobs = filtInner;
+    filterCutoff.setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
+    filterReso.setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
+    filterDrive.setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
+    filterKeyTrk.setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
+    filterVelTrk.setBounds(fknobs.reduced(2), knobSize, labelH);
     
-    // LFO 2
-    auto lfo2Col = lfoRow;
-    lfo2Label.setBounds(lfo2Col.removeFromTop(20));
-    lfo2WaveCombo.setBounds(lfo2Col.removeFromTop(comboHeight).reduced(2));
-    auto lfo2Knobs = lfo2Col;
-    lfo2Knobs.removeFromTop(2);
-    lfo2RateSlider.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo2RateLabel.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo2RateSlider.getBottom()));
-    lfo2AmountSlider.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo2AmountLabel.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo2AmountSlider.getBottom()));
-    lfo2DelaySlider.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo2DelayLabel.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo2DelaySlider.getBottom()));
-    lfo2FadeSlider.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2));
-    lfo2FadeLabel.setBounds(lfo2Knobs.removeFromLeft(knobSize).reduced(2).withHeight(labelHeight).withY(lfo2FadeSlider.getBottom()));
+    // === RIGHT: ENVELOPES + LFOS ===
+    // Amp Env
+    auto ampArea = rightCol.removeFromTop(150);
+    ampEnvPanel.setBounds(ampArea);
+    auto aInner = ampArea.reduced(14, 34);
+    int akw = (aInner.getWidth() - 4 * 6) / 5;
+    ampAtt.setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
+    ampDec.setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
+    ampSus.setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
+    ampRel.setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
+    ampVel.setBounds(aInner.reduced(2), knobSize, labelH);
     
-    bounds.removeFromTop(sectionGap);
+    // Filt Env
+    auto feArea = rightCol.removeFromTop(150);
+    filtEnvPanel.setBounds(feArea);
+    auto feInner = feArea.reduced(14, 34);
+    int fekw = (feInner.getWidth() - 5 * 6) / 6;
+    filtAtt.setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
+    filtDec.setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
+    filtSus.setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
+    filtRel.setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
+    filtAmt.setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
+    filtVel.setBounds(feInner.reduced(2), knobSize, labelH);
     
-    // === MOD MATRIX LABEL ===
-    auto modSection = bounds.removeFromTop(30);
-    modMatrixLabel.setBounds(modSection.reduced(10, 5));
+    // LFOs
+    auto lfoArea = rightCol.removeFromTop(180);
+    lfoPanel.setBounds(lfoArea);
+    auto lfoInner = lfoArea.reduced(14, 34);
+    int lfoColW = lfoInner.getWidth() / 2;
+    
+    auto lfo1Area = lfoInner.removeFromLeft(lfoColW); lfoInner.removeFromLeft(6);
+    lfo1Wave.setBounds(lfo1Area.removeFromTop(comboH).reduced(2));
+    auto l1k = lfo1Area.reduced(0, 4);
+    lfo1Rate.setBounds(l1k.removeFromLeft(70).reduced(2), knobSize, labelH);
+    lfo1Amt.setBounds(l1k.removeFromLeft(70).reduced(2), knobSize, labelH);
+    lfo1Delay.setBounds(l1k.removeFromLeft(70).reduced(2), knobSize, labelH);
+    lfo1Fade.setBounds(l1k.reduced(2), knobSize, labelH);
+    
+    auto lfo2Area = lfoInner;
+    lfo2Wave.setBounds(lfo2Area.removeFromTop(comboH).reduced(2));
+    auto l2k = lfo2Area.reduced(0, 4);
+    lfo2Rate.setBounds(l2k.removeFromLeft(70).reduced(2), knobSize, labelH);
+    lfo2Amt.setBounds(l2k.removeFromLeft(70).reduced(2), knobSize, labelH);
+    lfo2Delay.setBounds(l2k.removeFromLeft(70).reduced(2), knobSize, labelH);
+    lfo2Fade.setBounds(l2k.reduced(2), knobSize, labelH);
+    
+    // Mod Matrix
+    auto modArea = rightCol.removeFromTop(60);
+    modPanel.setBounds(modArea);
+    modLabel.setBounds(modArea.reduced(14, 0));
+    modLabel.setText("MOD MATRIX — 8 slots (right-click knobs → Map to MIDI / Mod Matrix)", juce::dontSendNotification);
+    modLabel.setJustificationType(juce::Justification::centred);
+    modLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF666677));
+    modLabel.setFont(11.0f);
 }
+
+// Knob instances
+KnobGroup masterGainKnob, polyphonyKnob, pitchBendKnob;
+KnobGroup osc1Level, osc1Pitch, osc1Fine, osc1Pan, osc1Unison, osc1Detune, osc1PW;
+KnobGroup osc2Level, osc2Pitch, osc2Fine, osc2Pan, osc2Unison, osc2Detune, osc2PW;
+KnobGroup osc3Level, osc3Pitch, osc3Fine, osc3Pan, osc3Unison, osc3Detune, osc3PW;
+KnobGroup subLevel, subPitch, noiseLevel;
+KnobGroup filterCutoff, filterReso, filterDrive, filterKeyTrk, filterVelTrk;
+KnobGroup ampAtt, ampDec, ampSus, ampRel, ampVel;
+KnobGroup filtAtt, filtDec, filtSus, filtRel, filtAmt, filtVel;
+KnobGroup lfo1Rate, lfo1Amt, lfo1Delay, lfo1Fade;
+KnobGroup lfo2Rate, lfo2Amt, lfo2Delay, lfo2Fade;
+
+// Panels
+SectionPanel oscPanel{"OSCILLATORS", juce::Colour(0xFF00D4AA)};
+SectionPanel filterPanel{"FILTER", juce::Colour(0xFFFF8844)};
+SectionPanel ampEnvPanel{"AMP ENVELOPE", juce::Colour(0xFF88AAFF)};
+SectionPanel filtEnvPanel{"FILTER ENVELOPE", juce::Colour(0xFFAA88FF)};
+SectionPanel lfoPanel{"LFOS", juce::Colour(0xFFFFAA88)};
+SectionPanel modPanel{"MODULATION", juce::Colour(0xFF888888)};
+
+// Wave combos
+juce::ComboBox osc1Wave, osc2Wave, osc3Wave, subWave, noiseWave, filterType, lfo1Wave, lfo2Wave;
+juce::ComboBox waveTypeComboBox;
+juce::TextButton testToneButton;
+juce::Label modLabel;
+
+// Attachments
+std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> 
+    osc1WaveAtt, osc2WaveAtt, osc3WaveAtt, subWaveAtt, noiseWaveAtt,
+    filterTypeAtt, lfo1WaveAtt, lfo2WaveAtt, waveTypeAttachment;
+
+juce::AudioProcessorValueTreeState& apvts;
+AnalogSynthAudioProcessor& processorRef;
