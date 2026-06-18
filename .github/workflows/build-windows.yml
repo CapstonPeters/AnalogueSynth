@@ -23,7 +23,7 @@ jobs:
             ${{ runner.temp }}/JUCE
             ${{ runner.temp }}/sccache
             build
-          key: ${{ runner.os }}-juce-cmake-${{ hashFiles('CMakeLists.txt', 'cmake/**', '.github/workflows/build-windows.yml') }}
+          key: ${{ runner.os }}-juce-cmake-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}
           restore-keys: |
             ${{ runner.os }}-juce-cmake-
 
@@ -50,7 +50,9 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           set SCCACHE_DIR=%RUNNER_TEMP%\sccache
+          echo "=== BUILD START: %DATE% %TIME% ==="
           cmake --build build --config Release -j%NUMBER_OF_PROCESSORS%
+          echo "=== BUILD END: %DATE% %TIME% ==="
 
       - name: Debug - List build output
         shell: pwsh
@@ -72,34 +74,34 @@ jobs:
           $vst3Dir = $vst3Dirs[0].FullName
           $parentDir = Split-Path $vst3Dir
           Write-Host "Found VST3 at: $vst3Dir"
-          
+
           # DEBUG: Show final VST3 bundle structure
           Write-Host "=== FINAL VST3 TREE ==="
           Get-ChildItem -Path "$vst3Dir" -Recurse | Select-Object FullName, Length
-          
+
           # DEBUG: Verify plugin.xml and moduleinfo.json exist with correct CID
           Write-Host "=== VERIFICATION ==="
           foreach ($file in @("plugin.xml", "moduleinfo.json")) {
             foreach ($dirName in @("x86_64-win", "Resources")) {
               $dirPath = Join-Path "$vst3Dir\Contents" $dirName
               $path = Join-Path $dirPath $file
-              if (Test-Path $path) { 
+              if (Test-Path $path) {
                 Write-Host "✓ $file exists in $dirName"
                 Write-Host "--- $file CONTENTS ---"
                 Get-Content $path
-              } else { 
-                Write-Warning "✗ $file MISSING in $dirName" 
+              } else {
+                Write-Warning "✗ $file MISSING in $dirName"
               }
             }
           }
-          
+
           $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
           if ($dll) {
             Write-Host "✓ Found plugin DLL: $($dll.FullName) ($($dll.Length) bytes)"
           } else {
             Write-Warning "✗ No DLL found in x86_64-win!"
           }
-          
+
           $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
           Compress-Archive -Path "$parentDir\AnalogSynth.vst3" -DestinationPath $zipPath -Force
           Write-Host "Created zip: $zipPath"
