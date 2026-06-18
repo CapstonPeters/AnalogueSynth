@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
 project(AnalogSynth VERSION 1.0.0 LANGUAGES CXX)
 
+# Disable Direct2D on Windows (not available in MinGW headers) - must be before FetchContent
+option(JUCE_DIRECT2D "Enable Direct2D renderer" OFF)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
