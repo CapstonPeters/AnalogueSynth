@@ -186,6 +186,21 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     // Create look and feel
     lookAndFeel = std::make_unique<SynthLookAndFeel>();
 
+    // === SECTION PANELS FIRST — so they're drawn UNDERNEATH the knobs ===
+    oscPanel     = std::make_unique<SectionPanel>("OSCILLATORS",      juce::Colour(0xFF00D4AA));
+    filterPanel  = std::make_unique<SectionPanel>("FILTER",           juce::Colour(0xFFFF8844));
+    ampEnvPanel  = std::make_unique<SectionPanel>("AMP ENVELOPE",     juce::Colour(0xFF88AAFF));
+    filtEnvPanel = std::make_unique<SectionPanel>("FILTER ENVELOPE",  juce::Colour(0xFFAA88FF));
+    lfoPanel     = std::make_unique<SectionPanel>("LFOS",             juce::Colour(0xFFFFAA88));
+    modPanel     = std::make_unique<SectionPanel>("MODULATION",       juce::Colour(0xFF888888));
+
+    addAndMakeVisible(oscPanel.get());
+    addAndMakeVisible(filterPanel.get());
+    addAndMakeVisible(ampEnvPanel.get());
+    addAndMakeVisible(filtEnvPanel.get());
+    addAndMakeVisible(lfoPanel.get());
+    addAndMakeVisible(modPanel.get());
+
     // === TOP BAR ===
     addAndMakeVisible(testToneButton);
     testToneButton.setButtonText("Test Tone A4");
@@ -197,11 +212,12 @@ void AnalogSynthAudioProcessorEditor::buildUI()
         repaint();
     };
 
+    addAndMakeVisible(waveTypeComboBox);
     waveTypeComboBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Noise"}, 1);
     waveTypeComboBox.setSelectedId(3);
     waveTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "osc1Wave", waveTypeComboBox);
 
-    // Global knobs
+    // Global knobs (header)
     masterGainKnob = std::make_unique<KnobGroup>(); masterGainKnob->setup("masterGain", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "GAIN", " dB", this, lookAndFeel.get());
     polyphonyKnob = std::make_unique<KnobGroup>(); polyphonyKnob->setup("polyphony", apvts, 1.0f, 16.0f, 1.0f, 8.0f, "VOICES", "", this, lookAndFeel.get());
     pitchBendKnob = std::make_unique<KnobGroup>(); pitchBendKnob->setup("pitchBendRange", apvts, 0.0f, 24.0f, 0.5f, 2.0f, "PB RANGE", " st", this, lookAndFeel.get());
@@ -277,20 +293,12 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     lfo2Delay = std::make_unique<KnobGroup>(); lfo2Delay->setup("lfo2Delay", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "DELAY", " s", this, lookAndFeel.get());
     lfo2Fade = std::make_unique<KnobGroup>(); lfo2Fade->setup("lfo2Fade", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "FADE", " s", this, lookAndFeel.get());
 
-    // Section panels
-    oscPanel = std::make_unique<SectionPanel>("OSCILLATORS", juce::Colour(0xFF00D4AA));
-    filterPanel = std::make_unique<SectionPanel>("FILTER", juce::Colour(0xFFFF8844));
-    ampEnvPanel = std::make_unique<SectionPanel>("AMP ENVELOPE", juce::Colour(0xFF88AAFF));
-    filtEnvPanel = std::make_unique<SectionPanel>("FILTER ENVELOPE", juce::Colour(0xFFAA88FF));
-    lfoPanel = std::make_unique<SectionPanel>("LFOS", juce::Colour(0xFFFFAA88));
-    modPanel = std::make_unique<SectionPanel>("MODULATION", juce::Colour(0xFF888888));
-
-    addAndMakeVisible(oscPanel.get());
-    addAndMakeVisible(filterPanel.get());
-    addAndMakeVisible(ampEnvPanel.get());
-    addAndMakeVisible(filtEnvPanel.get());
-    addAndMakeVisible(lfoPanel.get());
-    addAndMakeVisible(modPanel.get());
+    // Mod label
+    addAndMakeVisible(modLabel);
+    modLabel.setText("MOD MATRIX — 8 slots (right-click knobs → Map to MIDI / Mod Matrix)", juce::dontSendNotification);
+    modLabel.setJustificationType(juce::Justification::centred);
+    modLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF666677));
+    modLabel.setFont(juce::FontOptions(11.0f));
 }
 
 void AnalogSynthAudioProcessorEditor::paint(juce::Graphics& g)
@@ -455,8 +463,4 @@ void AnalogSynthAudioProcessorEditor::resized()
     auto modArea = rightCol.removeFromTop(60);
     modPanel->setBounds(modArea);
     modLabel.setBounds(modArea.reduced(14, 0));
-    modLabel.setText("MOD MATRIX — 8 slots (right-click knobs → Map to MIDI / Mod Matrix)", juce::dontSendNotification);
-    modLabel.setJustificationType(juce::Justification::centred);
-    modLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF666677));
-    modLabel.setFont(juce::FontOptions(11.0f));
 }
