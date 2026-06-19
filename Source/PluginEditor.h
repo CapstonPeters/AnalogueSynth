@@ -79,10 +79,12 @@ private:
 
     // Wave combos
     juce::ComboBox osc1Wave, osc2Wave, osc3Wave, subWave, noiseWave, filterType, lfo1Wave, lfo2Wave;
+    juce::ComboBox osc1Wavetable, osc2Wavetable, osc3Wavetable;
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
         osc1WaveAtt, osc2WaveAtt, osc3WaveAtt, subWaveAtt, noiseWaveAtt,
-        filterTypeAtt, lfo1WaveAtt, lfo2WaveAtt;
+        filterTypeAtt, lfo1WaveAtt, lfo2WaveAtt,
+        osc1WavetableAtt, osc2WavetableAtt, osc3WavetableAtt;
 
     // Section panels
     std::unique_ptr<SectionPanel> oscPanel, filterPanel, ampEnvPanel;

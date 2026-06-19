@@ -30,6 +30,7 @@ struct ParameterIDs
     static constexpr auto osc1Unison = "osc1Unison";
     static constexpr auto osc1Detune = "osc1Detune";
     static constexpr auto osc1PulseWidth = "osc1PulseWidth";
+    static constexpr auto osc1WavetableIndex = "osc1WavetableIndex";
     
     static constexpr auto osc2Wave = "osc2Wave";
     static constexpr auto osc2Level = "osc2Level";
@@ -39,6 +40,7 @@ struct ParameterIDs
     static constexpr auto osc2Unison = "osc2Unison";
     static constexpr auto osc2Detune = "osc2Detune";
     static constexpr auto osc2PulseWidth = "osc2PulseWidth";
+    static constexpr auto osc2WavetableIndex = "osc2WavetableIndex";
     
     static constexpr auto osc3Wave = "osc3Wave";
     static constexpr auto osc3Level = "osc3Level";
@@ -48,6 +50,7 @@ struct ParameterIDs
     static constexpr auto osc3Unison = "osc3Unison";
     static constexpr auto osc3Detune = "osc3Detune";
     static constexpr auto osc3PulseWidth = "osc3PulseWidth";
+    static constexpr auto osc3WavetableIndex = "osc3WavetableIndex";
     
     static constexpr auto subWave = "subWave";
     static constexpr auto subLevel = "subLevel";
@@ -100,6 +103,89 @@ struct ParameterIDs
 };
 
 //==============================================================================
+// Wavetable engine — pre‑generated 2048‑sample tables, generated once
+//==============================================================================
+class WavetableEngine
+{
+public:
+    static constexpr int TableSize = 2048;
+    static constexpr int NumTables = 15;
+    static constexpr const char* tableNames[NumTables] =
+    {
+        "Sine", "Triangle", "Saw", "Square",
+        "Moog Saw", "PWM Sweep", "Brass", "Soft Square",
+        "FM Bell", "Vocal", "Additive 1", "Organ",
+        "Pluck", "Chip", "Noise WT"
+    };
+
+    static const std::vector<std::array<float, TableSize>>& getTables()
+    {
+        static std::vector<std::array<float, TableSize>> tables = generateAll();
+        return tables;
+    }
+
+private:
+    static std::vector<std::array<float, TableSize>> generateAll()
+    {
+        std::vector<std::array<float, TableSize>> tables(NumTables);
+
+        constexpr double pi = 3.14159265358979323846;
+        for (int i = 0; i < TableSize; ++i)
+        {
+            double phase = static_cast<double>(i) / TableSize;
+            double ph = phase * 2.0 * pi;
+            double ph2 = (phase > 0.5 ? phase - 0.5 : phase + 0.5) * 2.0 * pi;
+
+            // 0: Sine
+            tables[0][i] = std::sin(ph);
+            // 1: Triangle
+            tables[1][i] = 2.0 * std::abs(2.0 * phase - 1.0) - 1.0;
+            // 2: Saw
+            tables[2][i] = 2.0 * phase - 1.0;
+            // 3: Square
+            tables[3][i] = (phase < 0.5) ? 1.0f : -1.0f;
+            // 4: Moog Saw (saturated saw)
+            double moogSaw = 2.0 * phase - 1.0;
+            tables[4][i] = std::tanh(moogSaw * 1.8);
+            // 5: PWM Sweep (square with varying PW across the table)
+            double pw = 0.2 + 0.6 * phase; // 20% to 80% PW
+            tables[5][i] = (phase < pw) ? 1.0f : -1.0f;
+            // 6: Brass (saw + square blended)
+            tables[6][i] = 0.5 * tables[2][i] + 0.5 * tables[3][i];
+            // 7: Soft Square (low-passed square via sine)
+            tables[7][i] = std::sin(ph) > 0.3 ? 1.0f : -1.0f;
+            // 8: FM Bell (FM with 2.5:1 ratio)
+            tables[8][i] = std::sin(ph + 0.7 * std::sin(ph * 2.5));
+            // 9: Vocal (formant-like)
+            tables[9][i] = 0.5 * std::sin(ph) + 0.3 * std::sin(ph*2.0) + 0.2 * std::sin(ph*3.0 + 0.5);
+            // 10: Additive 1 (4 harmonics)
+            tables[10][i] = std::sin(ph)*0.7 + std::sin(ph*2)*0.2 + std::sin(ph*3)*0.07 + std::sin(ph*4)*0.03;
+            // 11: Organ (drawbar style: 16'+8'+5⅓'+4'+2⅔')
+            tables[11][i] = std::sin(ph)*0.5 + std::sin(ph*2)*0.4 + std::sin(ph*3)*0.07 + std::sin(ph*4)*0.02 + std::sin(ph*(8.0/3.0))*0.01;
+            // 12: Pluck (exponentially decaying sine burst)
+            double pluckPhase = phase * 2.0;
+            double pluckEnv = pluckPhase < 2.0 ? std::exp(-pluckPhase * 4.0) : 0.0;
+            tables[12][i] = std::sin(ph * 20.0) * pluckEnv;
+            // 13: Chip (8-bit style stair-stepped saw)
+            double chipSaw = 2.0 * phase - 1.0;
+            tables[13][i] = std::floor(chipSaw * 15.0 + 0.5) / 15.0;
+            // 14: Noise WT (filtered noise — pseudo-random but deterministic)
+            {
+                uint32_t seed = static_cast<uint32_t>(i * 1664525 + 1013904223);
+                seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
+                float raw = seed * 2.3283064e-10f * 2.0f - 1.0f;
+                // Simple 1-pole lowpass with previous sample (since this is a static table)
+                static float prev = 0;
+                float filtered = prev + 0.02f * (raw - prev);
+                prev = filtered;
+                tables[14][i] = filtered;
+            }
+        }
+        return tables;
+    }
+};
+
+//==============================================================================
 // FastRandom - xorshift32 for thread-safe noise
 class FastRandom
 {
@@ -125,7 +211,7 @@ private:
 class Oscillator
 {
 public:
-    enum WaveType { Sine = 0, Triangle = 1, Saw = 2, Square = 3, Noise = 4 };
+    enum WaveType { Sine = 0, Triangle = 1, Saw = 2, Square = 3, Noise = 4, Wavetable = 5 };
     
     void prepare(double sampleRate)
     {
@@ -136,6 +222,7 @@ public:
     
     void setFrequency(float baseFreq) { freq = baseFreq; updatePhaseInc(); }
     void setWaveType(WaveType wt) { waveType = wt; }
+    void setWavetableIndex(int idx) { wavetableIdx = std::clamp(idx, 0, WavetableEngine::NumTables - 1); }
     void setLevel(float l) { level = l; }
     void setPan(float p) { pan = p; }
     void setUnison(int u) { unison = std::clamp(u, 1, 8); }
@@ -182,6 +269,18 @@ public:
                 case Noise:
                     sample = noiseGen.nextFloatBipolar();
                     break;
+                case Wavetable:
+                {
+                    const auto& tables = WavetableEngine::getTables();
+                    const auto& table = tables[wavetableIdx];
+                    float idx = static_cast<float>(osc.phase / (2.0 * juce::MathConstants<double>::pi) * WavetableEngine::TableSize);
+                    int i0 = static_cast<int>(idx);
+                    float frac = idx - i0;
+                    int i1 = (i0 + 1) % WavetableEngine::TableSize;
+                    i0 %= WavetableEngine::TableSize;
+                    sample = table[i0] + frac * (table[i1] - table[i0]);
+                    break;
+                }
             }
             
             sum += sample;
@@ -207,6 +306,7 @@ private:
     float pulseWidth = 0.5f;
     bool active = false;
     WaveType waveType = Saw;
+    int wavetableIdx = 0;
     FastRandom noiseGen;
     std::array<UnisonOsc, 8> unisonOscs;
     
@@ -764,6 +864,7 @@ struct SynthParams
         int unison = 1;
         float detune = 0.0f; // cents
         float pulseWidth = 0.5f;
+        int wavetableIndex = 0;
     };
     OscParams osc[3];
     

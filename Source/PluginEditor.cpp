@@ -223,7 +223,8 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     pitchBendKnob = std::make_unique<KnobGroup>(); pitchBendKnob->setup("pitchBendRange", apvts, 0.0f, 24.0f, 0.5f, 2.0f, "PB RANGE", " st", this, lookAndFeel.get());
 
     // === OSCILLATORS ===
-    setupCombo(osc1Wave, "osc1Wave", apvts, osc1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this, lookAndFeel.get());
+    setupCombo(osc1Wave, "osc1Wave", apvts, osc1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
+    setupCombo(osc1Wavetable, "osc1WavetableIndex", apvts, osc1WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
     osc1Level = std::make_unique<KnobGroup>(); osc1Level->setup("osc1Level", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "LEVEL", "", this, lookAndFeel.get());
     osc1Pitch = std::make_unique<KnobGroup>(); osc1Pitch->setup("osc1Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
     osc1Fine = std::make_unique<KnobGroup>(); osc1Fine->setup("osc1FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
@@ -232,7 +233,8 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc1Detune = std::make_unique<KnobGroup>(); osc1Detune->setup("osc1Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this, lookAndFeel.get());
     osc1PW = std::make_unique<KnobGroup>(); osc1PW->setup("osc1PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this, lookAndFeel.get());
 
-    setupCombo(osc2Wave, "osc2Wave", apvts, osc2WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this, lookAndFeel.get());
+    setupCombo(osc2Wave, "osc2Wave", apvts, osc2WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
+    setupCombo(osc2Wavetable, "osc2WavetableIndex", apvts, osc2WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
     osc2Level = std::make_unique<KnobGroup>(); osc2Level->setup("osc2Level", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "LEVEL", "", this, lookAndFeel.get());
     osc2Pitch = std::make_unique<KnobGroup>(); osc2Pitch->setup("osc2Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
     osc2Fine = std::make_unique<KnobGroup>(); osc2Fine->setup("osc2FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
@@ -241,7 +243,8 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc2Detune = std::make_unique<KnobGroup>(); osc2Detune->setup("osc2Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this, lookAndFeel.get());
     osc2PW = std::make_unique<KnobGroup>(); osc2PW->setup("osc2PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this, lookAndFeel.get());
 
-    setupCombo(osc3Wave, "osc3Wave", apvts, osc3WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise"}, 2, this, lookAndFeel.get());
+    setupCombo(osc3Wave, "osc3Wave", apvts, osc3WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
+    setupCombo(osc3Wavetable, "osc3WavetableIndex", apvts, osc3WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
     osc3Level = std::make_unique<KnobGroup>(); osc3Level->setup("osc3Level", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "LEVEL", "", this, lookAndFeel.get());
     osc3Pitch = std::make_unique<KnobGroup>(); osc3Pitch->setup("osc3Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
     osc3Fine = std::make_unique<KnobGroup>(); osc3Fine->setup("osc3FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
@@ -358,17 +361,18 @@ void AnalogSynthAudioProcessorEditor::resized()
     auto rightCol = bounds;
 
     // === LEFT: OSC + FILTER ===
-    auto oscArea = leftCol.removeFromTop(340);
+    auto oscArea = leftCol.removeFromTop(388);
     oscPanel->setBounds(oscArea);
     auto oscInner = oscArea.reduced(14, 34);
 
     int oscColW = (oscInner.getWidth() - 4 * 6) / 5;
 
-    auto layoutOsc = [&](juce::ComboBox& wave, KnobGroup* level, KnobGroup* pitch, KnobGroup* fine,
+    auto layoutOsc = [&](juce::ComboBox& wave, juce::ComboBox& wavetable, KnobGroup* level, KnobGroup* pitch, KnobGroup* fine,
                          KnobGroup* pan, KnobGroup* unison, KnobGroup* detune, KnobGroup* pw,
                          juce::Rectangle<int> col)
     {
         wave.setBounds(col.removeFromTop(comboH).reduced(2));
+        wavetable.setBounds(col.removeFromTop(comboH).reduced(2));
         auto knobs = col.reduced(0, 2);
         level->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
         pitch->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
@@ -380,13 +384,13 @@ void AnalogSynthAudioProcessorEditor::resized()
     };
 
     auto osc1Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc1Wave, osc1Level.get(), osc1Pitch.get(), osc1Fine.get(), osc1Pan.get(), osc1Unison.get(), osc1Detune.get(), osc1PW.get(), osc1Area);
+    layoutOsc(osc1Wave, osc1Wavetable, osc1Level.get(), osc1Pitch.get(), osc1Fine.get(), osc1Pan.get(), osc1Unison.get(), osc1Detune.get(), osc1PW.get(), osc1Area);
 
     auto osc2Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc2Wave, osc2Level.get(), osc2Pitch.get(), osc2Fine.get(), osc2Pan.get(), osc2Unison.get(), osc2Detune.get(), osc2PW.get(), osc2Area);
+    layoutOsc(osc2Wave, osc2Wavetable, osc2Level.get(), osc2Pitch.get(), osc2Fine.get(), osc2Pan.get(), osc2Unison.get(), osc2Detune.get(), osc2PW.get(), osc2Area);
 
     auto osc3Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc3Wave, osc3Level.get(), osc3Pitch.get(), osc3Fine.get(), osc3Pan.get(), osc3Unison.get(), osc3Detune.get(), osc3PW.get(), osc3Area);
+    layoutOsc(osc3Wave, osc3Wavetable, osc3Level.get(), osc3Pitch.get(), osc3Fine.get(), osc3Pan.get(), osc3Unison.get(), osc3Detune.get(), osc3PW.get(), osc3Area);
 
     // Sub + Noise
     auto subNoiseArea = oscInner; subNoiseArea.removeFromLeft(6);
