@@ -168,9 +168,21 @@ void AnalogSynthAudioProcessorEditor::KnobGroup::setBounds(juce::Rectangle<int> 
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p), apvts (p.getAPVTS())
 {
+    // Minimal constructor — defer all UI construction to avoid
+    // Windows static-initialization / thread-init crashes.
+    // The full UI is built on first resized() when the host's
+    // GUI thread is fully ready.
     setSize (1100, 780);
     setResizable (true, true);
+}
 
+AnalogSynthAudioProcessorEditor::~AnalogSynthAudioProcessorEditor()
+{
+    setLookAndFeel(nullptr);
+}
+
+void AnalogSynthAudioProcessorEditor::buildUI()
+{
     // Create look and feel
     lookAndFeel = std::make_unique<SynthLookAndFeel>();
 
@@ -281,11 +293,6 @@ AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAud
     addAndMakeVisible(modPanel.get());
 }
 
-AnalogSynthAudioProcessorEditor::~AnalogSynthAudioProcessorEditor()
-{
-    setLookAndFeel(nullptr);
-}
-
 void AnalogSynthAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xFF15151E));
@@ -309,6 +316,13 @@ void AnalogSynthAudioProcessorEditor::paint(juce::Graphics& g)
 
 void AnalogSynthAudioProcessorEditor::resized()
 {
+    // Deferred UI construction — safe to build now on the message thread
+    if (!initialized)
+    {
+        buildUI();
+        initialized = true;
+    }
+
     auto bounds = getLocalBounds().reduced(12);
     const int knobSize = 58;
     const int labelH = 16;

@@ -22,7 +22,7 @@ private:
     class SynthLookAndFeel;
     std::unique_ptr<SynthLookAndFeel> lookAndFeel;
 
-    // KnobGroup and SectionPanel need complete type for unique_ptr
+    // Complete type definitions for unique_ptr
     struct KnobGroup
     {
         juce::Slider slider;
@@ -50,6 +50,11 @@ private:
 
     AnalogSynthAudioProcessor& processorRef;
     juce::AudioProcessorValueTreeState& apvts;
+
+    // Deferred UI initialization — built on first resized() to avoid
+    // Windows static initialization / thread-initialization crashes
+    bool initialized = false;
+    void buildUI();
 
     // Top bar
     juce::TextButton testToneButton;
