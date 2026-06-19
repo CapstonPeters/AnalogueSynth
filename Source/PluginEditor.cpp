@@ -201,6 +201,11 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     addAndMakeVisible(lfoPanel.get());
     addAndMakeVisible(modPanel.get());
 
+    // Waveform previews
+    wf1 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf1.get());
+    wf2 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf2.get());
+    wf3 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf3.get());
+
     // === TOP BAR ===
     addAndMakeVisible(testToneButton);
     testToneButton.setButtonText("Test Tone A4");
@@ -366,13 +371,14 @@ void AnalogSynthAudioProcessorEditor::resized()
     auto oscInner = oscArea.reduced(14, 34);
 
     int oscColW = (oscInner.getWidth() - 4 * 6) / 5;
-
-    auto layoutOsc = [&](juce::ComboBox& wave, juce::ComboBox& wavetable, KnobGroup* level, KnobGroup* pitch, KnobGroup* fine,
+    auto layoutOsc = [&](juce::ComboBox& wave, juce::ComboBox& wavetable, juce::Component* wf,
+                         KnobGroup* level, KnobGroup* pitch, KnobGroup* fine,
                          KnobGroup* pan, KnobGroup* unison, KnobGroup* detune, KnobGroup* pw,
                          juce::Rectangle<int> col)
     {
         wave.setBounds(col.removeFromTop(comboH).reduced(2));
         wavetable.setBounds(col.removeFromTop(comboH).reduced(2));
+        wf->setBounds(col.removeFromTop(42).reduced(2));
         auto knobs = col.reduced(0, 2);
         level->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
         pitch->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
@@ -384,13 +390,13 @@ void AnalogSynthAudioProcessorEditor::resized()
     };
 
     auto osc1Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc1Wave, osc1Wavetable, osc1Level.get(), osc1Pitch.get(), osc1Fine.get(), osc1Pan.get(), osc1Unison.get(), osc1Detune.get(), osc1PW.get(), osc1Area);
+    layoutOsc(osc1Wave, osc1Wavetable, wf1.get(), osc1Level.get(), osc1Pitch.get(), osc1Fine.get(), osc1Pan.get(), osc1Unison.get(), osc1Detune.get(), osc1PW.get(), osc1Area);
 
     auto osc2Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc2Wave, osc2Wavetable, osc2Level.get(), osc2Pitch.get(), osc2Fine.get(), osc2Pan.get(), osc2Unison.get(), osc2Detune.get(), osc2PW.get(), osc2Area);
+    layoutOsc(osc2Wave, osc2Wavetable, wf2.get(), osc2Level.get(), osc2Pitch.get(), osc2Fine.get(), osc2Pan.get(), osc2Unison.get(), osc2Detune.get(), osc2PW.get(), osc2Area);
 
     auto osc3Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc3Wave, osc3Wavetable, osc3Level.get(), osc3Pitch.get(), osc3Fine.get(), osc3Pan.get(), osc3Unison.get(), osc3Detune.get(), osc3PW.get(), osc3Area);
+    layoutOsc(osc3Wave, osc3Wavetable, wf3.get(), osc3Level.get(), osc3Pitch.get(), osc3Fine.get(), osc3Pan.get(), osc3Unison.get(), osc3Detune.get(), osc3PW.get(), osc3Area);
 
     // Sub + Noise
     auto subNoiseArea = oscInner; subNoiseArea.removeFromLeft(6);
