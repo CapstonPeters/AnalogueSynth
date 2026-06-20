@@ -310,12 +310,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     // === OSCILLATORS ===
     setupCombo(osc1Wave, "osc1Wave", apvts, osc1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
     setupCombo(osc1Wavetable, "osc1WavetableIndex", apvts, osc1WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
-        // Waveform previews
-    wf1 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf1.get());
-    wf2 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf2.get());
-    wf3 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf3.get());
-    
-osc1Level = std::make_unique<KnobGroup>(); osc1Level->setup("osc1Level", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "LEVEL", "", this, lookAndFeel.get());
+    osc1Level = std::make_unique<KnobGroup>(); osc1Level->setup("osc1Level", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "LEVEL", "", this, lookAndFeel.get());
     osc1Pitch = std::make_unique<KnobGroup>(); osc1Pitch->setup("osc1Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
     osc1Fine = std::make_unique<KnobGroup>(); osc1Fine->setup("osc1FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
     osc1Pan = std::make_unique<KnobGroup>(); osc1Pan->setup("osc1Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this, lookAndFeel.get());
