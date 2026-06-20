@@ -294,6 +294,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     {
         params.push_back(std::make_unique<juce::AudioParameterChoice>(id, name, choices, def));
     };
+
+    auto addBool = [&](const char* id, const char* name, bool def)
+    {
+        params.push_back(std::make_unique<juce::AudioParameterBool>(id, name, def));
+    };
     
     // Global
     addFloat(ParameterIDs::masterGain, "Master Gain", 0.0f, 1.0f, 0.5f, "dB");
