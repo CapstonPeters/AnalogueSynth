@@ -130,8 +130,5 @@ private:
 
     juce::Label modLabel;
 
-    // Waveform preview displays
-    std::unique_ptr<juce::Component> wf1, wf2, wf3;
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessorEditor)
 };
