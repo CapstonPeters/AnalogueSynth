@@ -89,9 +89,9 @@ private:
     // Knob groups
     std::unique_ptr<KnobGroup> masterGainKnob, polyphonyKnob, pitchBendKnob;
 
-    std::unique_ptr<KnobGroup> osc1Level, osc1Pitch, osc1Fine, osc1Pan, osc1Unison, osc1Detune, osc1PW;
-    std::unique_ptr<KnobGroup> osc2Level, osc2Pitch, osc2Fine, osc2Pan, osc2Unison, osc2Detune, osc2PW;
-    std::unique_ptr<KnobGroup> osc3Level, osc3Pitch, osc3Fine, osc3Pan, osc3Unison, osc3Detune, osc3PW;
+    std::unique_ptr<KnobGroup> osc1Level, osc1Pitch, osc1Fine, osc1Pan, osc1Unison, osc1Detune, osc1PW, osc1Scan;
+    std::unique_ptr<KnobGroup> osc2Level, osc2Pitch, osc2Fine, osc2Pan, osc2Unison, osc2Detune, osc2PW, osc2Scan;
+    std::unique_ptr<KnobGroup> osc3Level, osc3Pitch, osc3Fine, osc3Pan, osc3Unison, osc3Detune, osc3PW, osc3Scan;
     std::unique_ptr<KnobGroup> subLevel, subPitch, noiseLevel;
 
     std::unique_ptr<KnobGroup> filterCutoff, filterReso, filterDrive, filterKeyTrk, filterVelTrk;

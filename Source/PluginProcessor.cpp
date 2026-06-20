@@ -16,6 +16,7 @@ void SynthVoice::updateParams(const SynthParams& p)
         oscillators[i].setDetune(p.osc[i].detune);
         oscillators[i].setPulseWidth(p.osc[i].pulseWidth);
         oscillators[i].setWavetableIndex(p.osc[i].wavetableIndex);
+        oscillators[i].setScan(p.osc[i].scan);
         oscPitchOffsets[i] = p.osc[i].pitch + p.osc[i].fineTune / 100.0f;
     }
     
@@ -302,6 +303,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addInt(ParameterIDs::osc1Unison, "Osc 1 Unison", 1, 8, 1);
     addFloat(ParameterIDs::osc1Detune, "Osc 1 Detune", 0.0f, 50.0f, 0.0f, "cents");
     addFloat(ParameterIDs::osc1PulseWidth, "Osc 1 Pulse Width", 0.01f, 0.99f, 0.5f);
+    addFloat(ParameterIDs::osc1Scan, "Osc 1 Scan", 0.0f, 1.0f, 0.0f);
     addChoice(ParameterIDs::osc1WavetableIndex, "Osc 1 Wavetable", {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0);
     
     // Osc 2
@@ -313,6 +315,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addInt(ParameterIDs::osc2Unison, "Osc 2 Unison", 1, 8, 1);
     addFloat(ParameterIDs::osc2Detune, "Osc 2 Detune", 0.0f, 50.0f, 0.0f, "cents");
     addFloat(ParameterIDs::osc2PulseWidth, "Osc 2 Pulse Width", 0.01f, 0.99f, 0.5f);
+    addFloat(ParameterIDs::osc2Scan, "Osc 2 Scan", 0.0f, 1.0f, 0.0f);
     addChoice(ParameterIDs::osc2WavetableIndex, "Osc 2 Wavetable", {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0);
     
     // Osc 3
@@ -324,6 +327,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addInt(ParameterIDs::osc3Unison, "Osc 3 Unison", 1, 8, 1);
     addFloat(ParameterIDs::osc3Detune, "Osc 3 Detune", 0.0f, 50.0f, 0.0f, "cents");
     addFloat(ParameterIDs::osc3PulseWidth, "Osc 3 Pulse Width", 0.01f, 0.99f, 0.5f);
+    addFloat(ParameterIDs::osc3Scan, "Osc 3 Scan", 0.0f, 1.0f, 0.0f);
     addChoice(ParameterIDs::osc3WavetableIndex, "Osc 3 Wavetable", {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0);
     
     // Sub
@@ -401,6 +405,7 @@ void AnalogSynthAudioProcessor::updateSynthParams()
         const char* detune[] = {ParameterIDs::osc1Detune, ParameterIDs::osc2Detune, ParameterIDs::osc3Detune};
         const char* pw[] = {ParameterIDs::osc1PulseWidth, ParameterIDs::osc2PulseWidth, ParameterIDs::osc3PulseWidth};
         const char* wt[] = {ParameterIDs::osc1WavetableIndex, ParameterIDs::osc2WavetableIndex, ParameterIDs::osc3WavetableIndex};
+        const char* scan[] = {ParameterIDs::osc1Scan, ParameterIDs::osc2Scan, ParameterIDs::osc3Scan};
         
         synthParams.osc[i].wave = static_cast<int>(getI(prefix[i]));
         synthParams.osc[i].level = getF(level[i]);
@@ -411,6 +416,7 @@ void AnalogSynthAudioProcessor::updateSynthParams()
         synthParams.osc[i].detune = getF(detune[i]);
         synthParams.osc[i].pulseWidth = getF(pw[i]);
         synthParams.osc[i].wavetableIndex = static_cast<int>(getI(wt[i]));
+        synthParams.osc[i].scan = getF(scan[i]);
     }
     
     // Sub

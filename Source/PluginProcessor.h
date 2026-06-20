@@ -31,6 +31,7 @@ struct ParameterIDs
     static constexpr auto osc1Detune = "osc1Detune";
     static constexpr auto osc1PulseWidth = "osc1PulseWidth";
     static constexpr auto osc1WavetableIndex = "osc1WavetableIndex";
+    static constexpr auto osc1Scan = "osc1Scan";
     
     static constexpr auto osc2Wave = "osc2Wave";
     static constexpr auto osc2Level = "osc2Level";
@@ -41,6 +42,7 @@ struct ParameterIDs
     static constexpr auto osc2Detune = "osc2Detune";
     static constexpr auto osc2PulseWidth = "osc2PulseWidth";
     static constexpr auto osc2WavetableIndex = "osc2WavetableIndex";
+    static constexpr auto osc2Scan = "osc2Scan";
     
     static constexpr auto osc3Wave = "osc3Wave";
     static constexpr auto osc3Level = "osc3Level";
@@ -51,6 +53,7 @@ struct ParameterIDs
     static constexpr auto osc3Detune = "osc3Detune";
     static constexpr auto osc3PulseWidth = "osc3PulseWidth";
     static constexpr auto osc3WavetableIndex = "osc3WavetableIndex";
+    static constexpr auto osc3Scan = "osc3Scan";
     
     static constexpr auto subWave = "subWave";
     static constexpr auto subLevel = "subLevel";
@@ -228,6 +231,7 @@ public:
     void setUnison(int u) { unison = std::clamp(u, 1, 8); }
     void setDetune(float d) { detune = d; }
     void setPulseWidth(float pw) { pulseWidth = std::clamp(pw, 0.01f, 0.99f); }
+    void setScan(float s) { scan = std::clamp(s, 0.0f, 1.0f); }
     
     void noteOn() 
     { 
@@ -271,14 +275,15 @@ public:
                     break;
                 case Wavetable:
                 {
-                    const auto& tables = WavetableEngine::getTables();
-                    const auto& table = tables[wavetableIdx];
-                    float idx = static_cast<float>(osc.phase / (2.0 * juce::MathConstants<double>::pi) * WavetableEngine::TableSize);
-                    int i0 = static_cast<int>(idx);
-                    float frac = idx - i0;
-                    int i1 = (i0 + 1) % WavetableEngine::TableSize;
-                    i0 %= WavetableEngine::TableSize;
-                    sample = table[i0] + frac * (table[i1] - table[i0]);
+                    float phaseNorm = static_cast<float>(osc.phase / (2.0 * juce::MathConstants<double>::pi));
+                    if (scan > 0.0f && wavetableIdx + 1 < WavetableEngine::NumTables)
+                    {
+                        sample = WavetableEngine::getMorphedSample(wavetableIdx, wavetableIdx + 1, scan, phaseNorm);
+                    }
+                    else
+                    {
+                        sample = WavetableEngine::getSample(wavetableIdx, phaseNorm);
+                    }
                     break;
                 }
             }
@@ -865,6 +870,7 @@ struct SynthParams
         float detune = 0.0f; // cents
         float pulseWidth = 0.5f;
         int wavetableIndex = 0;
+        float scan = 0.0f;
     };
     OscParams osc[3];
     
