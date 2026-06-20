@@ -389,6 +389,40 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParameterIDs::lfo2Delay, "LFO 2 Delay", 0.0f, 5.0f, 0.0f, "s");
     addFloat(ParameterIDs::lfo2Fade, "LFO 2 Fade", 0.0f, 5.0f, 0.0f, "s");
     
+    // LFO 3
+    addChoice(ParameterIDs::lfo3Wave, "LFO 3 Wave", lfoWaves, 1);
+    addFloat(ParameterIDs::lfo3Rate, "LFO 3 Rate", 0.01f, 20.0f, 5.0f, "Hz");
+    addFloat(ParameterIDs::lfo3Amount, "LFO 3 Amount", 0.0f, 1.0f, 0.0f);
+    addFloat(ParameterIDs::lfo3Delay, "LFO 3 Delay", 0.0f, 5.0f, 0.0f, "s");
+    addFloat(ParameterIDs::lfo3Fade, "LFO 3 Fade", 0.0f, 5.0f, 0.0f, "s");
+    
+    // LFO Sync
+    addBool(ParameterIDs::lfo1Sync, "LFO 1 Sync", false);
+    addBool(ParameterIDs::lfo2Sync, "LFO 2 Sync", false);
+    addBool(ParameterIDs::lfo3Sync, "LFO 3 Sync", false);
+    
+    // LFO Note values (when synced)
+    juce::StringArray lfoNotes = {"1/16", "1/8", "1/4", "1/2", "1 bar", "2 bars", "1/16T", "1/8T", "1/4T", "1/16D", "1/8D", "1/4D"};
+    addChoice(ParameterIDs::lfo1Note, "LFO 1 Note", lfoNotes, 3);
+    addChoice(ParameterIDs::lfo2Note, "LFO 2 Note", lfoNotes, 3);
+    addChoice(ParameterIDs::lfo3Note, "LFO 3 Note", lfoNotes, 3);
+    
+    // LFO Phase
+    addFloat(ParameterIDs::lfo1Phase, "LFO 1 Phase", 0.0f, 360.0f, 0.0f, "°");
+    addFloat(ParameterIDs::lfo2Phase, "LFO 2 Phase", 0.0f, 360.0f, 0.0f, "°");
+    addFloat(ParameterIDs::lfo3Phase, "LFO 3 Phase", 0.0f, 360.0f, 0.0f, "°");
+    
+    // LFO Trigger modes
+    juce::StringArray lfoTrig = {"Free", "Retrig", "Single"};
+    addChoice(ParameterIDs::lfo1Trigger, "LFO 1 Trigger", lfoTrig, 0);
+    addChoice(ParameterIDs::lfo2Trigger, "LFO 2 Trigger", lfoTrig, 0);
+    addChoice(ParameterIDs::lfo3Trigger, "LFO 3 Trigger", lfoTrig, 0);
+    
+    // LFO One-shot
+    addBool(ParameterIDs::lfo1OneShot, "LFO 1 One-Shot", false);
+    addBool(ParameterIDs::lfo2OneShot, "LFO 2 One-Shot", false);
+    addBool(ParameterIDs::lfo3OneShot, "LFO 3 One-Shot", false);
+    
     // Mod Matrix (8 slots - simplified as individual params for now)
     // In a full implementation, these would be structured differently
     // For now we'll skip detailed mod matrix params and use defaults

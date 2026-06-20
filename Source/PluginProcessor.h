@@ -99,6 +99,38 @@ struct ParameterIDs
     static constexpr auto lfo2Delay = "lfo2Delay";
     static constexpr auto lfo2Fade = "lfo2Fade";
     
+    // LFO 3
+    static constexpr auto lfo3Wave = "lfo3Wave";
+    static constexpr auto lfo3Rate = "lfo3Rate";
+    static constexpr auto lfo3Amount = "lfo3Amount";
+    static constexpr auto lfo3Delay = "lfo3Delay";
+    static constexpr auto lfo3Fade = "lfo3Fade";
+    
+    // LFO Sync (per LFO)
+    static constexpr auto lfo1Sync = "lfo1Sync";
+    static constexpr auto lfo2Sync = "lfo2Sync";
+    static constexpr auto lfo3Sync = "lfo3Sync";
+    
+    // LFO notes (when synced)
+    static constexpr auto lfo1Note = "lfo1Note";
+    static constexpr auto lfo2Note = "lfo2Note";
+    static constexpr auto lfo3Note = "lfo3Note";
+    
+    // LFO Phase
+    static constexpr auto lfo1Phase = "lfo1Phase";
+    static constexpr auto lfo2Phase = "lfo2Phase";
+    static constexpr auto lfo3Phase = "lfo3Phase";
+    
+    // LFO Trigger
+    static constexpr auto lfo1Trigger = "lfo1Trigger";
+    static constexpr auto lfo2Trigger = "lfo2Trigger";
+    static constexpr auto lfo3Trigger = "lfo3Trigger";
+    
+    // LFO One-shot
+    static constexpr auto lfo1OneShot = "lfo1OneShot";
+    static constexpr auto lfo2OneShot = "lfo2OneShot";
+    static constexpr auto lfo3OneShot = "lfo3OneShot";
+    
     // Mod Matrix (8 slots: source, dest, amount)
     static constexpr auto modMatrixSource = "modMatrixSource";
     static constexpr auto modMatrixDest = "modMatrixDest";
