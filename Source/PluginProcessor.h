@@ -127,6 +127,27 @@ public:
         return tables;
     }
 
+    // Get a single linearly-interpolated sample from a specific table
+    static float getSample(int tableIndex, float phase)
+    {
+        const auto& tables = getTables();
+        int clamped = std::clamp(tableIndex, 0, NumTables - 1);
+        float raw = phase * TableSize;
+        int idx = int(raw) % TableSize;
+        float frac = raw - idx;
+        int next = (idx + 1) % TableSize;
+        const auto& tbl = tables[clamped];
+        return tbl[idx] + frac * (tbl[next] - tbl[idx]);
+    }
+
+    // Crossfade two adjacent tables at a given phase with a fractional blend
+    static float getMorphedSample(int tableA, int tableB, float blend, float phase)
+    {
+        float a = getSample(tableA, phase);
+        float b = getSample(tableB, phase);
+        return a + blend * (b - a);
+    }
+
 private:
     static std::vector<std::array<float, TableSize>> generateAll()
     {
@@ -312,6 +333,7 @@ private:
     bool active = false;
     WaveType waveType = Saw;
     int wavetableIdx = 0;
+    float scan = 0.0f; // 0.0 = pure selected table, 1.0 = crossfaded fully to next table
     FastRandom noiseGen;
     std::array<UnisonOsc, 8> unisonOscs;
     
@@ -870,7 +892,7 @@ struct SynthParams
         float detune = 0.0f; // cents
         float pulseWidth = 0.5f;
         int wavetableIndex = 0;
-        float scan = 0.0f;
+        float scan = 0.0f; // 0.0 = start of selected table, 1.0 = next table
     };
     OscParams osc[3];
     

@@ -376,7 +376,8 @@ void AnalogSynthAudioProcessorEditor::resized()
     int oscColW = (oscInner.getWidth() - 4 * 6) / 5;
     auto layoutOsc = [&](juce::ComboBox& wave, juce::ComboBox& wavetable, juce::Component* wf,
                          KnobGroup* level, KnobGroup* pitch, KnobGroup* fine,
-                         KnobGroup* pan, KnobGroup* unison, KnobGroup* detune, KnobGroup* pw, KnobGroup* scan,
+                         KnobGroup* pan, KnobGroup* unison, KnobGroup* detune, KnobGroup* pw,
+                         KnobGroup* scan,
                          juce::Rectangle<int> col)
     {
         wave.setBounds(col.removeFromTop(comboH).reduced(2));
