@@ -67,7 +67,6 @@ private:
     void buildUI();
 
     // Header controls
-    juce::TextButton testToneButton;
     juce::ComboBox waveTypeComboBox;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> waveTypeAttachment;
 

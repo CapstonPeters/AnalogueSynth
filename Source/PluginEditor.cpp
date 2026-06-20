@@ -287,16 +287,6 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     wf3 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf3.get());
 
     // === TOP BAR ===
-    addAndMakeVisible(testToneButton);
-    testToneButton.setButtonText("Test Tone A4");
-    testToneButton.setClickingTogglesState(true);
-    testToneButton.onClick = [this]()
-    {
-        processorRef.setTestToneActive(testToneButton.getToggleState());
-        testToneButton.setButtonText(testToneButton.getToggleState() ? "Stop Tone" : "Test Tone A4");
-        repaint();
-    };
-
     addAndMakeVisible(waveTypeComboBox);
     waveTypeComboBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Noise"}, 1);
     waveTypeComboBox.setSelectedId(3);
@@ -430,8 +420,6 @@ void AnalogSynthAudioProcessorEditor::resized()
 
     // Header
     auto headerBar = bounds.removeFromTop(56);
-    testToneButton.setBounds(headerBar.removeFromLeft(110).reduced(6));
-    headerBar.removeFromLeft(12);
     waveTypeComboBox.setBounds(headerBar.removeFromLeft(120).reduced(4).withHeight(comboH).withY(12));
 
     auto globalArea = headerBar.removeFromRight(220).reduced(4);
