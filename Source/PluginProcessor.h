@@ -830,6 +830,16 @@ public:
     
     // Process one sample (stereo output)
     void process(float& outL, float& outR);
+
+    // Set per-block modulation values from MIDI controllers
+    void setBlockModulation(float modWheel, float pb, float at, float expr, float pbRange)
+    {
+        modWheelVal = modWheel;
+        pitchBendVal = pb;
+        aftertouchVal = at;
+        exprPedalVal = expr;
+        pitchBendRange = pbRange;
+    }
     
 private:
     double sr = 44100;
@@ -851,6 +861,13 @@ private:
     Oscillator subOsc;
     Oscillator noiseOsc;
     float oscPitchOffsets[3] = {0, 0, 0};
+
+    // Per-block modulation values
+    float modWheelVal = 0;
+    float pitchBendVal = 0;
+    float aftertouchVal = 0;
+    float exprPedalVal = 1.0f;
+    float pitchBendRange = 2.0f;
     
     // Envelopes
     ADSREnvelope ampEnv;
@@ -1002,6 +1019,9 @@ public:
         {
             if (!v.isActive()) continue;
             
+            // Set per-block modulation
+            v.setBlockModulation(modWheel, pitchBend, aftertouch, exprPedal, p.pitchBendRange);
+            
             float voiceL = 0, voiceR = 0;
             for (int i = 0; i < numSamples; ++i)
             {
@@ -1009,7 +1029,6 @@ public:
                 outL[i] += voiceL;
                 outR[i] += voiceR;
             }
-            // samplesSinceNoteOn is updated inside voice.process()
         }
         
         // Apply master gain

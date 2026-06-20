@@ -84,19 +84,27 @@ void SynthVoice::process(float& outL, float& outR)
     
     // Get modulation values
     float keyTrack = (note - 60) / 12.0f; // Middle C = 0
-    float modWheelVal = 0; // Would come from MIDI
-    float aftertouchVal = 0;
-    float pitchBendVal = 0;
-    float exprPedalVal = 1.0f;
+    float mw = modWheelVal;
+    float at = aftertouchVal;
+    float pb = pitchBendVal;
+    float expr = exprPedalVal;
+
+    // Pitch bend: shift oscillator frequencies
+    float pbSemitones = pb * pitchBendRange;
+    float pbFactor = std::pow(2.0f, pbSemitones / 12.0f);
+
+    // Mod wheel → filter cutoff boost (0 to +24 semitones)
+    float mwBoost = mw * 24.0f;
     
     // Filter cutoff modulation
-    float filtMod = modMatrix.getModulation(ModDest::FilterCutoff, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, modWheelVal, aftertouchVal, pitchBendVal, exprPedalVal);
+    float filtMod = modMatrix.getModulation(ModDest::FilterCutoff, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, mw, at, pb, expr);
     filtMod += filtEnvOut * filtAmount;
+    filtMod += mwBoost; // Mod wheel opens filter
     filter.setCutoffMod(filtMod);
     
     // Oscillator pitch modulation (LFO1 -> pitch)
-    float pitchMod = modMatrix.getModulation(ModDest::Osc1Pitch, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, modWheelVal, aftertouchVal, pitchBendVal, exprPedalVal);
-    float pitchMult = std::pow(2.0f, pitchMod / 12.0f);
+    float pitchMod = modMatrix.getModulation(ModDest::Osc1Pitch, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, mw, at, pb, expr);
+    float pitchMult = std::pow(2.0f, pitchMod / 12.0f) * pbFactor;
     
     // Process oscillators
     float oscSumL = 0, oscSumR = 0;
@@ -123,9 +131,10 @@ void SynthVoice::process(float& outL, float& outR)
         oscSumR += sample * noiseOsc.getRightGain();
     }
     
-    // Apply amp envelope
-    oscSumL *= ampEnvOut;
-    oscSumR *= ampEnvOut;
+    // Apply amp envelope with velocity scaling
+    float velScale = 0.3f + velocity * 0.7f; // velocity 0→0.3, velocity 1→1.0
+    oscSumL *= ampEnvOut * velScale;
+    oscSumR *= ampEnvOut * velScale;
     
     // Process filter
     float filteredL, filteredR;
@@ -133,6 +142,10 @@ void SynthVoice::process(float& outL, float& outR)
     
     outL = filteredL;
     outR = filteredR;
+
+    // Expression pedal → output level
+    outL *= expr;
+    outR *= expr;
     
     // NaN/Inf protection
     if (!std::isfinite(outL)) outL = 0;
