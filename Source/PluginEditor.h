@@ -58,31 +58,6 @@ private:
         juce::String waveType = "Saw";
     };
 
-    // Mini oscilloscope — draws wavetable preview
-    class WaveformPreview : public juce::Component
-    {
-    public:
-        WaveformPreview() = default;
-        void paint(juce::Graphics& g) override
-        {
-            g.setColour(juce::Colours::cyan.withAlpha(0.5f));
-            g.drawRect(getLocalBounds(), 1);
-            auto area = getLocalBounds().reduced(2);
-            float mid = area.getCentreY();
-            float h = area.getHeight() * 0.4f;
-            juce::Path p;
-            p.startNewSubPath(area.getX(), mid);
-            for (int x = 0; x <= area.getWidth(); ++x)
-            {
-                float phase = float(x) / area.getWidth();
-                float val = std::sin(phase * juce::MathConstants<float>::twoPi);
-                p.lineTo(area.getX() + x, mid - val * h);
-            }
-            g.setColour(juce::Colours::cyan);
-            g.strokePath(p, juce::PathStrokeType(1.0f));
-        }
-    };
-
     AnalogSynthAudioProcessor& processorRef;
     juce::AudioProcessorValueTreeState& apvts;
 
