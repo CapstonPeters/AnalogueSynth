@@ -110,6 +110,86 @@ static void setupCombo(juce::ComboBox& combo, const juce::String& paramID,
 AnalogSynthAudioProcessorEditor::SectionPanel::SectionPanel(const juce::String& title, juce::Colour accentColour)
     : titleText(title), accent(accentColour) {}
 
+
+//==============================================================================
+// WaveformPreview
+void AnalogSynthAudioProcessorEditor::WaveformPreview::paint(juce::Graphics& g)
+{
+    auto bounds = getLocalBounds().toFloat();
+    g.setColour(juce::Colours::black.withAlpha(0.5f));
+    g.fillRoundedRectangle(bounds, 4.0f);
+    g.setColour(juce::Colours::cyan.withAlpha(0.7f));
+    
+    float w = bounds.getWidth();
+    float h = bounds.getHeight();
+    float midY = h / 2.0f;
+    float amp = h * 0.35f;
+    
+    juce::Path path;
+    path.startNewSubPath(0, midY);
+    
+    if (waveType == "Sine")
+    {
+        for (float x = 0; x <= w; x += 1.0f)
+            path.lineTo(x, midY - std::sin(x / w * juce::MathConstants<float>::twoPi * 2.0f) * amp);
+    }
+    else if (waveType == "Triangle" || waveType == "Triangle")
+    {
+        for (float x = 0; x <= w; x += 1.0f)
+        {
+            float phase = std::fmod(x / w, 1.0f);
+            float val = 4.0f * std::fabs(phase - 0.5f) - 1.0f;
+            path.lineTo(x, midY - val * amp);
+        }
+    }
+    else if (waveType == "Saw")
+    {
+        for (float x = 0; x <= w; x += 1.0f)
+        {
+            float phase = std::fmod(x / w, 1.0f);
+            path.lineTo(x, midY - (phase * 2.0f - 1.0f) * amp);
+        }
+    }
+    else if (waveType == "Square" || waveType == "Pulse")
+    {
+        for (float x = 0; x <= w; x += 1.0f)
+        {
+            float phase = std::fmod(x / w, 1.0f);
+            float val = phase < 0.5f ? 1.0f : -1.0f;
+            path.lineTo(x, midY - val * amp);
+        }
+    }
+    else if (waveType == "Noise" || waveType == "White" || waveType == "Pink")
+    {
+        juce::Random rng;
+        for (float x = 0; x <= w; x += 1.0f)
+            path.lineTo(x, midY + (rng.nextFloat() - 0.5f) * amp * 2.0f);
+    }
+    else if (waveType == "Wavetable")
+    {
+        // Show a complex waveform
+        for (float x = 0; x <= w; x += 1.0f)
+        {
+            float phase = x / w;
+            float val = std::sin(phase * juce::MathConstants<float>::twoPi * 3.0f) * 0.5f
+                      + std::sin(phase * juce::MathConstants<float>::twoPi * 7.0f) * 0.3f
+                      + std::sin(phase * juce::MathConstants<float>::twoPi * 12.0f) * 0.2f;
+            path.lineTo(x, midY - val * amp);
+        }
+    }
+    else
+    {
+        // Default saw
+        for (float x = 0; x <= w; x += 1.0f)
+        {
+            float phase = std::fmod(x / w, 1.0f);
+            path.lineTo(x, midY - (phase * 2.0f - 1.0f) * amp);
+        }
+    }
+    
+    g.strokePath(path, juce::PathStrokeType(1.3f));
+}
+
 void AnalogSynthAudioProcessorEditor::SectionPanel::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
@@ -230,7 +310,12 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     // === OSCILLATORS ===
     setupCombo(osc1Wave, "osc1Wave", apvts, osc1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
     setupCombo(osc1Wavetable, "osc1WavetableIndex", apvts, osc1WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
-    osc1Level = std::make_unique<KnobGroup>(); osc1Level->setup("osc1Level", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "LEVEL", "", this, lookAndFeel.get());
+        // Waveform previews
+    wf1 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf1.get());
+    wf2 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf2.get());
+    wf3 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf3.get());
+    
+osc1Level = std::make_unique<KnobGroup>(); osc1Level->setup("osc1Level", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "LEVEL", "", this, lookAndFeel.get());
     osc1Pitch = std::make_unique<KnobGroup>(); osc1Pitch->setup("osc1Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
     osc1Fine = std::make_unique<KnobGroup>(); osc1Fine->setup("osc1FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
     osc1Pan = std::make_unique<KnobGroup>(); osc1Pan->setup("osc1Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this, lookAndFeel.get());
@@ -374,7 +459,7 @@ void AnalogSynthAudioProcessorEditor::resized()
     auto oscInner = oscArea.reduced(14, 34);
 
     int oscColW = (oscInner.getWidth() - 4 * 6) / 5;
-    auto layoutOsc = [&](juce::ComboBox& wave, juce::ComboBox& wavetable, juce::Component* wf,
+    auto layoutOsc = [&](juce::ComboBox& wave, juce::ComboBox& wavetable, WaveformPreview* wf,
                          KnobGroup* level, KnobGroup* pitch, KnobGroup* fine,
                          KnobGroup* pan, KnobGroup* unison, KnobGroup* detune, KnobGroup* pw,
                          KnobGroup* scan,
@@ -382,7 +467,8 @@ void AnalogSynthAudioProcessorEditor::resized()
     {
         wave.setBounds(col.removeFromTop(comboH).reduced(2));
         wavetable.setBounds(col.removeFromTop(comboH).reduced(2));
-        wf->setBounds(col.removeFromTop(42).reduced(2));
+        auto wfArea = col.removeFromTop(32);
+        wf->setBounds(wfArea.reduced(4));
         auto knobs = col.reduced(0, 2);
         level->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
         pitch->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);

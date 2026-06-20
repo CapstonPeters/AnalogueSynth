@@ -48,6 +48,16 @@ private:
         juce::Colour accent;
     };
 
+    class WaveformPreview : public juce::Component
+    {
+    public:
+        WaveformPreview() = default;
+        void paint(juce::Graphics& g) override;
+        void setWaveType(const juce::String& type) { waveType = type; repaint(); }
+    private:
+        juce::String waveType = "Saw";
+    };
+
     // Mini oscilloscope — draws wavetable preview
     class WaveformPreview : public juce::Component
     {
@@ -81,10 +91,13 @@ private:
     bool initialized = false;
     void buildUI();
 
-    // Top bar
+    // Header controls
     juce::TextButton testToneButton;
     juce::ComboBox waveTypeComboBox;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> waveTypeAttachment;
+
+    // Waveform previews (oscilloscope-style)
+    std::unique_ptr<WaveformPreview> wf1, wf2, wf3;
 
     // Knob groups
     std::unique_ptr<KnobGroup> masterGainKnob, polyphonyKnob, pitchBendKnob;
