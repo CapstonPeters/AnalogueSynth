@@ -62,7 +62,7 @@ jobs:
           Write-Host "=== Searching for VST3 bundles ==="
           Get-ChildItem -Path "build" -Recurse -Directory -Filter "*.vst3" | Select-Object FullName
 
-      - name: Find and package VST3
+      - name: Fix VST3 bundle + package
         id: package-vst3
         shell: pwsh
         run: |
@@ -75,31 +75,44 @@ jobs:
           $parentDir = Split-Path $vst3Dir
           Write-Host "Found VST3 at: $vst3Dir"
 
-          # DEBUG: Show final VST3 bundle structure
+          $x64Dir = Join-Path $vst3Dir "Contents\x86_64-win"
+          $resourcesDir = Join-Path $vst3Dir "Contents\Resources"
+
+          # 1. Copy moduleinfo.json from Resources to x86_64-win
+          $moduleInfoSrc = Join-Path $resourcesDir "moduleinfo.json"
+          if (Test-Path $moduleInfoSrc) {
+            Copy-Item $moduleInfoSrc $x64Dir -Force
+            Write-Host "✓ Copied moduleinfo.json to x86_64-win"
+          } else {
+            Write-Warning "✗ moduleinfo.json not found in Resources!"
+          }
+
+          # 2. Create plugin.xml (required by Bitwig for metadata scanning)
+          $pluginXmlPath = Join-Path $x64Dir "plugin.xml"
+          $xmlLines = @(
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<plugin version="1" xmlns="http://www.steinberg.net/vst3/2008/plugin">',
+            '  <class name="AnalogSynthAudioProcessor" cid="ABCDEF019182FAEB4D616E75416E5379"/>',
+            '  <component name="AnalogSynthAudioProcessor" cid="ABCDEF019182FAEB4D616E75416E5379">',
+            '    <audio><bus name="Stereo Out" type="kMain" channel-count="2" flags="kOutput"/></audio>',
+            '    <event><bus name="Event In" type="kMain" channel-count="16" flags="kInput"/></event>',
+            '  </component>',
+            '</plugin>'
+          )
+          Set-Content -Path $pluginXmlPath -Value ($xmlLines -join "`n") -Encoding UTF8
+          Write-Host "✓ Created plugin.xml in x86_64-win"
+
+          # Also copy plugin.xml to Resources for completeness
+          Copy-Item $pluginXmlPath $resourcesDir -Force
+          Write-Host "✓ Copied plugin.xml to Resources"
+
+          # 3. Verify final state
           Write-Host "=== FINAL VST3 TREE ==="
           Get-ChildItem -Path "$vst3Dir" -Recurse | Select-Object FullName, Length
 
-          # DEBUG: Verify plugin.xml and moduleinfo.json exist with correct CID
-          Write-Host "=== VERIFICATION ==="
-          foreach ($file in @("plugin.xml", "moduleinfo.json")) {
-            foreach ($dirName in @("x86_64-win", "Resources")) {
-              $dirPath = Join-Path "$vst3Dir\Contents" $dirName
-              $path = Join-Path $dirPath $file
-              if (Test-Path $path) {
-                Write-Host "✓ $file exists in $dirName"
-                Write-Host "--- $file CONTENTS ---"
-                Get-Content $path
-              } else {
-                Write-Warning "✗ $file MISSING in $dirName"
-              }
-            }
-          }
-
-          $dll = Get-ChildItem -Path "$vst3Dir\Contents\x86_64-win" -Filter "*.vst3" -ErrorAction SilentlyContinue
+          $dll = Get-ChildItem -Path $x64Dir -Filter "*.vst3" -ErrorAction SilentlyContinue
           if ($dll) {
-            Write-Host "✓ Found plugin DLL: $($dll.FullName) ($($dll.Length) bytes)"
-          } else {
-            Write-Warning "✗ No DLL found in x86_64-win!"
+            Write-Host "✓ Found plugin DLL: $($dll.Name) ($($dll.Length) bytes)"
           }
 
           $zipPath = "$(Get-Location)\AnalogSynth-Windows.vst3.zip"
