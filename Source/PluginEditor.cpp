@@ -26,20 +26,20 @@ public:
     void drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h,
                            float pos, float start, float end, juce::Slider& s) override
     {
-        auto r   = juce::Rectangle<float>((float)x, (float)y, (float)w, (float)h).reduced (3);
+        auto r   = juce::Rectangle<float>((float)x, (float)y, (float)w, (float)h).reduced(3);
         auto rad = juce::jmin (r.getWidth(), r.getHeight()) / 2.0f;
         auto c   = r.getCentre();
 
         // outer ring
-        g.setColour (juce::Colour (0xFF2A2A3A));
+        g.setColour (juce::Colour(0xFF2A2A3A));
         g.drawEllipse (r, 1.5f);
 
         // filled arc
         auto angle = start + pos * (end - start);
         juce::Path arc;
         arc.addCentredArc (c.x, c.y, rad - 5, rad - 5, 0, start, angle, true);
-        g.setColour (findColour (juce::Slider::rotarySliderFillColourId).withAlpha (0.85f));
-        g.strokePath (arc, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        g.setColour (findColour(juce::Slider::rotarySliderFillColourId).withAlpha(0.85f));
+        g.strokePath (arc, juce::PathStrokeType(3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
         // indicator dot
         auto dotPos = c.getPointOnCircumference (rad - 10, angle);
@@ -47,19 +47,19 @@ public:
         g.fillEllipse (dotPos.x - 3, dotPos.y - 3, 6, 6);
 
         // centre dot
-        g.setColour (juce::Colour (0xFF15151E));
+        g.setColour (juce::Colour(0xFF15151E));
         g.fillEllipse (c.x - 5, c.y - 5, 10, 10);
-        g.setColour (juce::Colour (0xFF2A2A3A));
+        g.setColour (juce::Colour(0xFF2A2A3A));
         g.drawEllipse (c.x - 5, c.y - 5, 10, 10, 1.0f);
     }
 
     juce::Label* createSliderTextBox (juce::Slider& s) override
     {
-        auto* l = LookAndFeel_V4::createSliderTextBox (s);
+        auto* l = LookAndFeel_V4::createSliderTextBox(s);
         l->setColour (juce::Label::outlineColourId,      juce::Colours::transparentBlack);
-        l->setColour (juce::Label::backgroundColourId,   juce::Colour (0x401A1A2A));
-        l->setColour (juce::Label::textColourId,         juce::Colour (0xFFBBBBCC));
-        l->setFont (juce::FontOptions (10.0f));
+        l->setColour (juce::Label::backgroundColourId,   juce::Colour(0x401A1A2A));
+        l->setColour (juce::Label::textColourId,         juce::Colour(0xFFBBBBCC));
+        l->setFont (juce::FontOptions(10.0f));
         l->setJustificationType (juce::Justification::centred);
         return l;
     }
@@ -67,16 +67,16 @@ public:
     void drawComboBox (juce::Graphics& g, int w, int h, bool,
                        int bx, int by, int bw, int bh, juce::ComboBox& box) override
     {
-        auto r = juce::Rectangle<int> (0, 0, w, h);
-        g.setColour (findColour (juce::ComboBox::backgroundColourId));
+        auto r = juce::Rectangle<int>(0, 0, w, h);
+        g.setColour (findColour(juce::ComboBox::backgroundColourId));
         g.fillRoundedRectangle (r.toFloat(), 4.0f);
-        g.setColour (findColour (juce::ComboBox::outlineColourId));
-        g.drawRoundedRectangle (r.toFloat().reduced (0.5f), 4.0f, 1.0f);
+        g.setColour (findColour(juce::ComboBox::outlineColourId));
+        g.drawRoundedRectangle (r.toFloat().reduced(0.5f), 4.0f, 1.0f);
 
         juce::Path arrow;
         arrow.addTriangle (0, 0, 8, 0, 4, 5);
-        g.setColour (findColour (juce::ComboBox::arrowColourId));
-        g.fillPath (arrow, juce::AffineTransform::translation ((float)(w - 16), (float)((h - 4) / 2)));
+        g.setColour (findColour(juce::ComboBox::arrowColourId));
+        g.fillPath (arrow, juce::AffineTransform::translation((float)(w - 16), (float)((h - 4) / 2)));
     }
 };
 
@@ -84,30 +84,31 @@ public:
 // SectionPanel
 //==============================================================================
 AnalogSynthAudioProcessorEditor::SectionPanel::SectionPanel (const juce::String& t, juce::Colour a)
-    : title (t), accent (a) {}
+    : title(t), accent(a) {}
 
 void AnalogSynthAudioProcessorEditor::SectionPanel::paint (juce::Graphics& g)
 {
     auto b = getLocalBounds().toFloat();
+
     // gradient card
-    juce::ColourGradient grad (juce::Colour (0xFF1C1C2C), b.getTopLeft(),
-                               juce::Colour (0xFF161622), b.getBottomLeft(), false);
+    juce::ColourGradient grad (juce::Colour(0xFF1C1C2C), b.getTopLeft(),
+                               juce::Colour(0xFF161622), b.getBottomLeft(), false);
     g.setGradientFill (grad);
-    g.fillRoundedRectangle (b.reduced (1), 8.0f);
+    g.fillRoundedRectangle (b.reduced(1), 8.0f);
 
     // accent bar at top
-    g.setColour (accent.withAlpha (0.6f));
-    g.fillRoundedRectangle (b.removeFromTop (2).reduced (4, 0), 8.0f);
+    g.setColour (accent.withAlpha(0.6f));
+    g.fillRoundedRectangle (b.removeFromTop(2).reduced(4, 0), 8.0f);
 
     // title
     g.setColour (accent);
-    g.setFont (juce::FontOptions (12.0f, juce::Font::bold));
-    g.drawText (title, getLocalBounds().removeFromTop (26).reduced (10, 0),
+    g.setFont (juce::FontOptions(12.0f, juce::Font::bold));
+    g.drawText (title, getLocalBounds().removeFromTop(26).reduced(10, 0),
                 juce::Justification::centredLeft);
 
     // subtle border
-    g.setColour (juce::Colour (0xFF2A2A3A));
-    g.drawRoundedRectangle (b.reduced (0.5f), 8.0f, 0.5f);
+    g.setColour (juce::Colour(0xFF2A2A3A));
+    g.drawRoundedRectangle (b.reduced(0.5f), 8.0f, 0.5f);
 }
 
 //==============================================================================
@@ -115,34 +116,36 @@ void AnalogSynthAudioProcessorEditor::SectionPanel::paint (juce::Graphics& g)
 //==============================================================================
 void AnalogSynthAudioProcessorEditor::WaveformPreview::paint (juce::Graphics& g)
 {
-    auto b    = getLocalBounds().toFloat();
-    auto w    = b.getWidth();
-    auto h    = b.getHeight();
-    auto mid  = h / 2.0f;
-    auto amp  = h * 0.35f;
+    auto b   = getLocalBounds().toFloat();
+    auto w   = b.getWidth();
+    auto h   = b.getHeight();
+    auto mid = h / 2.0f;
+    auto amp = h * 0.35f;
 
-    g.setColour (juce::Colours::black.withAlpha (0.4f));
+    g.setColour (juce::Colours::black.withAlpha(0.4f));
     g.fillRoundedRectangle (b, 3.0f);
+    g.setColour (juce::Colour(0xFF2A2A35));
+    g.drawRoundedRectangle (b, 3.0f, 0.5f);
 
     juce::Path p;
     p.startNewSubPath (0, mid);
 
     if (waveType == "Sine") {
         for (float x = 0; x <= w; x += 1.0f)
-            p.lineTo (x, mid - std::sin (x / w * juce::MathConstants<float>::twoPi * 2.0f) * amp);
+            p.lineTo (x, mid - std::sin(x / w * juce::MathConstants<float>::twoPi * 2.0f) * amp);
     } else if (waveType == "Triangle") {
         for (float x = 0; x <= w; x += 1.0f) {
-            float ph = std::fmod (x / w, 1.0f);
-            p.lineTo (x, mid - (4.0f * std::fabs (ph - 0.5f) - 1.0f) * amp);
+            float ph = std::fmod(x / w, 1.0f);
+            p.lineTo (x, mid - (4.0f * std::fabs(ph - 0.5f) - 1.0f) * amp);
         }
     } else if (waveType == "Saw") {
         for (float x = 0; x <= w; x += 1.0f) {
-            float ph = std::fmod (x / w, 1.0f);
+            float ph = std::fmod(x / w, 1.0f);
             p.lineTo (x, mid - (ph * 2.0f - 1.0f) * amp);
         }
     } else if (waveType == "Square") {
         for (float x = 0; x <= w; x += 1.0f)
-            p.lineTo (x, mid - (std::fmod (x / w, 1.0f) < 0.5f ? 1.0f : -1.0f) * amp);
+            p.lineTo (x, mid - (std::fmod(x / w, 1.0f) < 0.5f ? 1.0f : -1.0f) * amp);
     } else if (waveType == "Noise") {
         juce::Random rng;
         for (float x = 0; x <= w; x += 1.0f)
@@ -150,14 +153,137 @@ void AnalogSynthAudioProcessorEditor::WaveformPreview::paint (juce::Graphics& g)
     } else if (waveType == "Wavetable") {
         for (float x = 0; x <= w; x += 1.0f) {
             float ph = x / w;
-            float val = std::sin (ph * juce::MathConstants<float>::twoPi * 3.0f) * 0.5f
-                      + std::sin (ph * juce::MathConstants<float>::twoPi * 7.0f) * 0.3f
-                      + std::sin (ph * juce::MathConstants<float>::twoPi * 12.0f) * 0.2f;
+            float val = std::sin(ph * juce::MathConstants<float>::twoPi * 3.0f) * 0.5f
+                      + std::sin(ph * juce::MathConstants<float>::twoPi * 7.0f) * 0.3f
+                      + std::sin(ph * juce::MathConstants<float>::twoPi * 12.0f) * 0.2f;
             p.lineTo (x, mid - val * amp);
         }
     }
-    g.setColour (juce::Colour (0xFF00E5B0).withAlpha (0.7f));
-    g.strokePath (p, juce::PathStrokeType (1.0f));
+    g.setColour (juce::Colour(0xFF00E5B0).withAlpha(0.7f));
+    g.strokePath (p, juce::PathStrokeType(1.2f));
+}
+
+//==============================================================================
+// EnvDisplay — animated ADSR envelope curve
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::EnvDisplay::setParams (float att, float dec, float sus, float rel)
+{
+    attack  = att;
+    decay   = dec;
+    sustain = sus;
+    release = rel;
+    repaint();
+}
+
+void AnalogSynthAudioProcessorEditor::EnvDisplay::paint (juce::Graphics& g)
+{
+    auto b = getLocalBounds().toFloat().reduced(2);
+
+    // dark background
+    g.setColour (juce::Colour(0xFF111118));
+    g.fillRoundedRectangle (b, 4.0f);
+
+    // build ADSR path
+    juce::Path p;
+    float total = attack + decay + release + 0.02f;
+    float sx = b.getX(), sy = b.getBottom();
+    p.startNewSubPath (sx, sy);
+
+    // Attack: bottom-left → top
+    float x1 = sx + (attack / total) * b.getWidth();
+    p.lineTo (x1, b.getY() + 4);
+
+    // Decay: top → sustain level
+    float x2 = x1 + (decay / total) * b.getWidth();
+    float susY = b.getY() + (1.0f - sustain) * (b.getHeight() - 8);
+    p.lineTo (x2, susY);
+
+    // Sustain hold (short)
+    float x3 = x2 + (0.02f / total) * b.getWidth();
+    p.lineTo (x3, susY);
+
+    // Release: sustain → bottom
+    float x4 = x3 + (release / total) * b.getWidth();
+    p.lineTo (x4, sy);
+
+    // draw curve
+    g.setColour (juce::Colour(0xFF00E5B0).withAlpha(0.85f));
+    g.strokePath (p, juce::PathStrokeType(1.8f));
+
+    // dot markers at key points
+    auto dot = [&](float x, float y) {
+        g.setColour (juce::Colour(0xFF00E5B0).withAlpha(0.9f));
+        g.fillEllipse (x - 3, y - 3, 6, 6);
+    };
+    dot (x1, b.getY() + 4);
+    dot (x2, susY);
+    dot (x3, susY);
+    dot (x4, sy);
+}
+
+//==============================================================================
+// FilterCurveDisplay — filter response visualization
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::FilterCurveDisplay::setParams (int type, float cutoff, float reso)
+{
+    filterType  = type;
+    cutoffFreq  = cutoff;
+    resonance   = reso;
+    repaint();
+}
+
+void AnalogSynthAudioProcessorEditor::FilterCurveDisplay::paint (juce::Graphics& g)
+{
+    auto b = getLocalBounds().toFloat().reduced(2);
+
+    // dark background
+    g.setColour (juce::Colour(0xFF111118));
+    g.fillRoundedRectangle (b, 4.0f);
+
+    // grid lines
+    g.setColour (juce::Colour(0xFF1A1A26));
+    for (int i = 1; i < 4; ++i) {
+        float y = b.getY() + b.getHeight() * i / 4.0f;
+        g.drawLine (b.getX(), y, b.getRight(), y, 0.5f);
+    }
+    for (int i = 1; i < 4; ++i) {
+        float x = b.getX() + b.getWidth() * i / 4.0f;
+        g.drawLine (x, b.getY(), x, b.getBottom(), 0.5f);
+    }
+
+    // draw filter response curve
+    juce::Path p;
+    p.startNewSubPath (b.getX(), b.getBottom());
+
+    float normCutoff = std::log (std::max(20.0f, cutoffFreq) / 20.0f) / std::log(20000.0f / 20.0f);
+    float cx = b.getX() + normCutoff * b.getWidth();
+
+    for (float x = b.getX(); x <= b.getRight(); x += 1.0f) {
+        float freq = 20.0f * std::pow (20000.0f / 20.0f, (x - b.getX()) / b.getWidth());
+        float response;
+
+        // simplified filter response
+        float ratio = freq / std::max(20.0f, cutoffFreq);
+        float gain = 1.0f / std::sqrt (1.0f + std::pow(ratio, 2.0f * (filterType <= 1 ? 4.0f : filterType <= 3 ? 2.0f : 1.0f)));
+
+        // resonance peak near cutoff
+        if (resonance > 0.01f && freq > cutoffFreq * 0.5f && freq < cutoffFreq * 2.0f) {
+            float dist = std::abs (freq - cutoffFreq) / cutoffFreq;
+            float peak = resonance * std::exp (-dist * dist * 40.0f / (resonance + 0.1f));
+            gain += peak * 0.5f;
+        }
+
+        float db = juce::Decibels::gainToDecibels (gain, -48.0f);
+        float y = b.getBottom() - (db + 48.0f) / 48.0f * b.getHeight();
+        p.lineTo (x, juce::jlimit (b.getY(), b.getBottom(), y));
+    }
+
+    g.setColour (juce::Colour(0xFFFF7744).withAlpha(0.8f));
+    g.strokePath (p, juce::PathStrokeType(1.5f));
+
+    // cutoff marker line
+    g.setColour (juce::Colour(0xFFFF7744).withAlpha(0.3f));
+    g.drawLine (cx, b.getY(), cx, b.getBottom(), 0.5f);
 }
 
 //==============================================================================
@@ -184,10 +310,10 @@ void AnalogSynthAudioProcessorEditor::KnobGroup::setup (
 
     label.setText (txt, juce::dontSendNotification);
     label.setJustificationType (juce::Justification::centred);
-    label.setFont (juce::FontOptions (9.0f));
-    label.setColour (juce::Label::textColourId, juce::Colour (0xFF777788));
+    label.setFont (juce::FontOptions(9.0f));
+    label.setColour (juce::Label::textColourId, juce::Colour(0xFF777788));
 
-    att = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (a, id, slider);
+    att = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(a, id, slider);
 }
 
 //==============================================================================
@@ -204,16 +330,16 @@ static void setCombo (juce::ComboBox& cb, const juce::String& id,
     for (int i = 0; i < choices.size(); ++i)
         cb.addItem (choices[i], i + 1);
     cb.setSelectedId (defIdx + 1, juce::dontSendNotification);
-    att = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (a, id, cb);
+    att = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(a, id, cb);
 }
 
 //==============================================================================
-// Editor
+// Editor constructor / destructor
 //==============================================================================
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
-    : AudioProcessorEditor (&p), proc (p), apvts (p.getAPVTS())
+    : AudioProcessorEditor (&p), proc(p), apvts(p.getAPVTS())
 {
-    setSize (1050, 760);
+    setSize (1120, 780);
     setResizable (true, true);
 }
 
@@ -222,290 +348,385 @@ AnalogSynthAudioProcessorEditor::~AnalogSynthAudioProcessorEditor()
     setLookAndFeel (nullptr);
 }
 
+//==============================================================================
+// buildUI — all control creation (called from resized on first call)
+//==============================================================================
 void AnalogSynthAudioProcessorEditor::buildUI()
 {
     laf = std::make_unique<SynthLookAndFeel>();
 
-    // panels
+    // === panels first (z-order: underneath controls) ===
     addAndMakeVisible (oscPanel);
     addAndMakeVisible (filtPanel);
     addAndMakeVisible (ampPanel);
     addAndMakeVisible (fenvPanel);
     addAndMakeVisible (lfoPanel);
+    addAndMakeVisible (fxPanel);
+    addAndMakeVisible (macroPanel);
     addAndMakeVisible (modPanel);
 
-    // Global
-    masterGain.setup ("masterGain",      apvts, 0.0f, 1.0f, 0.01f, 0.5f,  "GAIN",  " dB", this, laf.get());
-    polyphony.setup ("polyphony",        apvts, 1.0f, 16.0f, 1.0f, 8.0f,  "VOICES","",    this, laf.get());
-    pitchBend.setup  ("pitchBendRange",  apvts, 0.0f, 24.0f, 0.5f, 2.0f,  "BEND",  " st", this, laf.get());
+    // === Global ===
+    masterGain.setup ("masterGain",      apvts, 0.0f, 1.0f,  0.01f, 0.5f, "GAIN",   " dB", this, laf.get());
+    polyphony.setup   ("polyphony",       apvts, 1.0f, 16.0f, 1.0f,  8.0f, "VOICES", "",    this, laf.get());
+    pitchBend.setup   ("pitchBendRange",  apvts, 0.0f, 24.0f, 0.5f,  2.0f, "BEND",   " st", this, laf.get());
 
-    // --- Osc 1
-    setCombo (osc1Wave,  "osc1Wave",  apvts, osc1WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
-    setCombo (osc1WT,    "osc1WavetableIndex", apvts, osc1WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
-    osc1Lev.setup ("osc1Level",        apvts, 0.0f, 1.0f, 0.01f, 0.7f,   "LEVEL",  "",     this, laf.get());
-    osc1Pit.setup ("osc1Pitch",        apvts, -24.0f,24.0f,1.0f,0.0f,    "PITCH",  " st",  this, laf.get());
-    osc1Fin.setup ("osc1FineTune",     apvts, -50.0f,50.0f,1.0f,0.0f,    "FINE",   " ct",  this, laf.get());
-    osc1Pan.setup ("osc1Pan",          apvts, -1.0f, 1.0f, 0.01f,0.0f,   "PAN",    "",     this, laf.get());
-    osc1Uni.setup ("osc1Unison",       apvts, 1.0f, 8.0f, 1.0f, 1.0f,    "UNISON", "",     this, laf.get());
-    osc1Det.setup ("osc1Detune",       apvts, 0.0f, 50.0f,1.0f,0.0f,     "DETUNE", " ct",  this, laf.get());
-    osc1PW.setup  ("osc1PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
-    osc1Scn.setup ("osc1Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
+    // === OSC 1 ===
+    setCombo (osc1Wave, "osc1Wave",  apvts, osc1WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
+    setCombo (osc1WT,   "osc1WavetableIndex", apvts, osc1WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
+    osc1Lev.setup ("osc1Level",        apvts, 0.0f, 1.0f,  0.01f, 0.7f, "LEVEL",  "",    this, laf.get());
+    osc1Pit.setup ("osc1Pitch",        apvts, -24.0f,24.0f,1.0f,  0.0f, "PITCH",  " st", this, laf.get());
+    osc1Fin.setup ("osc1FineTune",     apvts, -50.0f,50.0f,1.0f,  0.0f, "FINE",   " ct", this, laf.get());
+    osc1Pan.setup ("osc1Pan",          apvts, -1.0f, 1.0f,  0.01f, 0.0f, "PAN",    "",    this, laf.get());
+    osc1Uni.setup ("osc1Unison",       apvts, 1.0f, 8.0f,   1.0f,  1.0f, "UNISON", "",    this, laf.get());
+    osc1Det.setup ("osc1Detune",       apvts, 0.0f, 50.0f,  1.0f,  0.0f, "DETUNE", " ct", this, laf.get());
+    osc1PW.setup  ("osc1PulseWidth",   apvts, 0.01f,0.99f, 0.01f, 0.5f, "PW",     "%",   this, laf.get());
+    osc1Scn.setup ("osc1Scan",         apvts, 0.0f, 1.0f,  0.01f, 0.0f, "SCAN",   "",    this, laf.get());
     addAndMakeVisible (wf1);
 
-    // --- Osc 2
-    setCombo (osc2Wave,  "osc2Wave",  apvts, osc2WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
-    setCombo (osc2WT,    "osc2WavetableIndex", apvts, osc2WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
-    osc2Lev.setup ("osc2Level",        apvts, 0.0f, 1.0f, 0.01f, 0.5f,   "LEVEL",  "",     this, laf.get());
-    osc2Pit.setup ("osc2Pitch",        apvts, -24.0f,24.0f,1.0f,0.0f,    "PITCH",  " st",  this, laf.get());
-    osc2Fin.setup ("osc2FineTune",     apvts, -50.0f,50.0f,1.0f,0.0f,    "FINE",   " ct",  this, laf.get());
-    osc2Pan.setup ("osc2Pan",          apvts, -1.0f, 1.0f, 0.01f,0.0f,   "PAN",    "",     this, laf.get());
-    osc2Uni.setup ("osc2Unison",       apvts, 1.0f, 8.0f, 1.0f, 1.0f,    "UNISON", "",     this, laf.get());
-    osc2Det.setup ("osc2Detune",       apvts, 0.0f, 50.0f,1.0f,0.0f,     "DETUNE", " ct",  this, laf.get());
-    osc2PW.setup  ("osc2PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
-    osc2Scn.setup ("osc2Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
+    // === OSC 2 ===
+    setCombo (osc2Wave, "osc2Wave",  apvts, osc2WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
+    setCombo (osc2WT,   "osc2WavetableIndex", apvts, osc2WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
+    osc2Lev.setup ("osc2Level",        apvts, 0.0f, 1.0f,  0.01f, 0.5f, "LEVEL",  "",    this, laf.get());
+    osc2Pit.setup ("osc2Pitch",        apvts, -24.0f,24.0f,1.0f,  0.0f, "PITCH",  " st", this, laf.get());
+    osc2Fin.setup ("osc2FineTune",     apvts, -50.0f,50.0f,1.0f,  0.0f, "FINE",   " ct", this, laf.get());
+    osc2Pan.setup ("osc2Pan",          apvts, -1.0f, 1.0f,  0.01f, 0.0f, "PAN",    "",    this, laf.get());
+    osc2Uni.setup ("osc2Unison",       apvts, 1.0f, 8.0f,   1.0f,  1.0f, "UNISON", "",    this, laf.get());
+    osc2Det.setup ("osc2Detune",       apvts, 0.0f, 50.0f,  1.0f,  0.0f, "DETUNE", " ct", this, laf.get());
+    osc2PW.setup  ("osc2PulseWidth",   apvts, 0.01f,0.99f, 0.01f, 0.5f, "PW",     "%",   this, laf.get());
+    osc2Scn.setup ("osc2Scan",         apvts, 0.0f, 1.0f,  0.01f, 0.0f, "SCAN",   "",    this, laf.get());
     addAndMakeVisible (wf2);
 
-    // --- Osc 3
-    setCombo (osc3Wave,  "osc3Wave",  apvts, osc3WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
-    setCombo (osc3WT,    "osc3WavetableIndex", apvts, osc3WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
-    osc3Lev.setup ("osc3Level",        apvts, 0.0f, 1.0f, 0.01f, 0.3f,   "LEVEL",  "",     this, laf.get());
-    osc3Pit.setup ("osc3Pitch",        apvts, -24.0f,24.0f,1.0f,0.0f,    "PITCH",  " st",  this, laf.get());
-    osc3Fin.setup ("osc3FineTune",     apvts, -50.0f,50.0f,1.0f,0.0f,    "FINE",   " ct",  this, laf.get());
-    osc3Pan.setup ("osc3Pan",          apvts, -1.0f, 1.0f, 0.01f,0.0f,   "PAN",    "",     this, laf.get());
-    osc3Uni.setup ("osc3Unison",       apvts, 1.0f, 8.0f, 1.0f, 1.0f,    "UNISON", "",     this, laf.get());
-    osc3Det.setup ("osc3Detune",       apvts, 0.0f, 50.0f,1.0f,0.0f,     "DETUNE", " ct",  this, laf.get());
-    osc3PW.setup  ("osc3PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
-    osc3Scn.setup ("osc3Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
+    // === OSC 3 ===
+    setCombo (osc3Wave, "osc3Wave",  apvts, osc3WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
+    setCombo (osc3WT,   "osc3WavetableIndex", apvts, osc3WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
+    osc3Lev.setup ("osc3Level",        apvts, 0.0f, 1.0f,  0.01f, 0.3f, "LEVEL",  "",    this, laf.get());
+    osc3Pit.setup ("osc3Pitch",        apvts, -24.0f,24.0f,1.0f,  0.0f, "PITCH",  " st", this, laf.get());
+    osc3Fin.setup ("osc3FineTune",     apvts, -50.0f,50.0f,1.0f,  0.0f, "FINE",   " ct", this, laf.get());
+    osc3Pan.setup ("osc3Pan",          apvts, -1.0f, 1.0f,  0.01f, 0.0f, "PAN",    "",    this, laf.get());
+    osc3Uni.setup ("osc3Unison",       apvts, 1.0f, 8.0f,   1.0f,  1.0f, "UNISON", "",    this, laf.get());
+    osc3Det.setup ("osc3Detune",       apvts, 0.0f, 50.0f,  1.0f,  0.0f, "DETUNE", " ct", this, laf.get());
+    osc3PW.setup  ("osc3PulseWidth",   apvts, 0.01f,0.99f, 0.01f, 0.5f, "PW",     "%",   this, laf.get());
+    osc3Scn.setup ("osc3Scan",         apvts, 0.0f, 1.0f,  0.01f, 0.0f, "SCAN",   "",    this, laf.get());
     addAndMakeVisible (wf3);
 
-    // Sub + Noise
-    setCombo (subWave,   "subWave",  apvts, subWaveA,  {"Sine","Square"}, 0, this, laf.get());
-    subLev.setup ("subLevel",         apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "SUB",    "",     this, laf.get());
-    subPit.setup ("subPitch",         apvts, -24.0f,0.0f,1.0f,-12.0f,   "S PIT",  " st",  this, laf.get());
-    setCombo (noiseType, "noiseType", apvts, noiseTypeA, {"White","Pink"}, 0, this, laf.get());
-    noiseLev.setup ("noiseLevel",     apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "NOISE",  "",     this, laf.get());
+    // === Sub + Noise ===
+    setCombo (subWave,   "subWave",   apvts, subWaveA,  {"Sine","Square"}, 0, this, laf.get());
+    subLev.setup ("subLevel",          apvts, 0.0f, 1.0f,  0.01f, 0.0f,  "SUB",   "",    this, laf.get());
+    subPit.setup ("subPitch",          apvts, -24.0f,0.0f, 1.0f,  -12.0f,"S PIT", " st", this, laf.get());
+    setCombo (noiseType, "noiseType",  apvts, noiseTypeA, {"White","Pink"}, 0, this, laf.get());
+    noiseLev.setup ("noiseLevel",      apvts, 0.0f, 1.0f,  0.01f, 0.0f,  "NOISE", "",    this, laf.get());
 
-    // Filter
+    // === Filter ===
     setCombo (filtType, "filterType", apvts, filtTypeA, {"LP 4-Pole","LP 2-Pole","HP 4-Pole","HP 2-Pole","Bandpass","Notch"}, 0, this, laf.get());
-    filtCut.setup ("filterCutoff",     apvts, 20.0f,20000.0f,1.0f,1000.0f,"CUTOFF", " Hz",  this, laf.get());
-    filtRes.setup ("filterResonance",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,  "RESO",   "",     this, laf.get());
-    filtDrv.setup ("filterDrive",      apvts, 0.0f, 1.0f, 0.01f, 0.0f,  "DRIVE",  "",     this, laf.get());
-    filtKey.setup ("filterKeyTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f, "KEY",    "",     this, laf.get());
-    filtVel.setup ("filterVelTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f, "VEL",    "",     this, laf.get());
+    filtCut.setup ("filterCutoff",     apvts, 20.0f,20000.0f,1.0f,1000.0f,"CUTOFF", " Hz", this, laf.get());
+    filtRes.setup ("filterResonance",  apvts, 0.0f, 1.0f,  0.01f, 0.0f,  "RESO",   "",    this, laf.get());
+    filtDrv.setup ("filterDrive",      apvts, 0.0f, 1.0f,  0.01f, 0.0f,  "DRIVE",  "",    this, laf.get());
+    filtKey.setup ("filterKeyTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f,  "KEY",    "",    this, laf.get());
+    filtVel.setup ("filterVelTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f,  "VEL",    "",    this, laf.get());
+    addAndMakeVisible (filterCurve);
 
-    // Amp Env
-    ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get());
-    ampD.setup  ("ampDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "DEC"," s", this, laf.get());
-    ampS.setup  ("ampSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.7f,       "SUS","",   this, laf.get());
-    ampR.setup  ("ampRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "REL"," s", this, laf.get());
-    ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get());
+    // === Amp Envelope ===
+    ampA.setup   ("ampAttack",   apvts, 0.001f,10.0f,0.001f,0.01f,"ATT"," s", this, laf.get());
+    ampD.setup   ("ampDecay",    apvts, 0.001f,10.0f,0.001f,0.3f, "DEC"," s", this, laf.get());
+    ampS.setup   ("ampSustain",  apvts, 0.0f,  1.0f, 0.01f, 0.7f, "SUS","",   this, laf.get());
+    ampR.setup   ("ampRelease",  apvts, 0.001f,10.0f,0.001f,0.3f, "REL"," s", this, laf.get());
+    ampVel.setup ("ampVelSens",  apvts, 0.0f,  1.0f, 0.01f, 0.5f, "VEL","",   this, laf.get());
+    addAndMakeVisible (ampCurve);
 
-    // Filt Env
-    fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get());
-    fenvD.setup  ("filtDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC"," s", this, laf.get());
-    fenvS.setup  ("filtSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "SUS","",   this, laf.get());
-    fenvR.setup  ("filtRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL"," s", this, laf.get());
-    fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get());
-    fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get());
+    // === Filter Envelope ===
+    fenvA.setup   ("filtAttack",  apvts, 0.001f,10.0f,0.001f,0.01f,"ATT"," s", this, laf.get());
+    fenvD.setup   ("filtDecay",   apvts, 0.001f,10.0f,0.001f,0.3f, "DEC"," s", this, laf.get());
+    fenvS.setup   ("filtSustain", apvts, 0.0f,  1.0f, 0.01f, 0.0f, "SUS","",   this, laf.get());
+    fenvR.setup   ("filtRelease", apvts, 0.001f,10.0f,0.001f,0.3f, "REL"," s", this, laf.get());
+    fenvAmt.setup ("filtAmount",  apvts, -1.0f, 1.0f, 0.01f, 0.5f, "AMT","",   this, laf.get());
+    fenvVel.setup ("filtVelSens", apvts, 0.0f,  1.0f, 0.01f, 0.0f, "VEL","",   this, laf.get());
+    addAndMakeVisible (fenvCurve);
 
-    // LFO 1
+    // === LFOs ===
     setCombo (lfo1Wave, "lfo1Wave", apvts, lfo1WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 0, this, laf.get());
-    lfo1Rate.setup ("lfo1Rate",   apvts, 0.01f, 20.0f, 0.01f, 1.0f,  "RATE"," Hz",this, laf.get());
-    lfo1Amt.setup  ("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get());
-    lfo1Del.setup  ("lfo1Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get());
-    lfo1Fade.setup ("lfo1Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get());
+    lfo1Rate.setup ("lfo1Rate",   apvts, 0.01f,20.0f,0.01f,1.0f,"RATE"," Hz",this, laf.get());
+    lfo1Amt.setup  ("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f,0.0f,"AMT", "",   this, laf.get());
+    lfo1Del.setup  ("lfo1Delay",  apvts, 0.0f, 5.0f, 0.01f,0.0f,"DEL", " s", this, laf.get());
+    lfo1Fade.setup ("lfo1Fade",   apvts, 0.0f, 5.0f, 0.01f,0.0f,"FADE"," s", this, laf.get());
 
-    // LFO 2
     setCombo (lfo2Wave, "lfo2Wave", apvts, lfo2WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 1, this, laf.get());
-    lfo2Rate.setup ("lfo2Rate",   apvts, 0.01f, 20.0f, 0.01f, 5.0f,  "RATE"," Hz",this, laf.get());
-    lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get());
-    lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get());
-    lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get());
+    lfo2Rate.setup ("lfo2Rate",   apvts, 0.01f,20.0f,0.01f,5.0f,"RATE"," Hz",this, laf.get());
+    lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f,0.0f,"AMT", "",   this, laf.get());
+    lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f,0.0f,"DEL", " s", this, laf.get());
+    lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f,0.0f,"FADE"," s", this, laf.get());
 
-    // Mod matrix label
+    // === FX (placeholder knobs — no APVTS attachment yet, for visual layout) ===
+    auto setupPlaceholder = [&](KnobGroup& k, const juce::String& txt, const juce::String& suffix, float def) {
+        addAndMakeVisible(k.slider);
+        addAndMakeVisible(k.label);
+        k.slider.setLookAndFeel(laf.get());
+        k.slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        k.slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 46, 18);
+        k.slider.setTextValueSuffix(suffix);
+        k.slider.setRange(0.0f, 1.0f, 0.01f);
+        k.slider.setValue(def);
+        k.label.setText(txt, juce::dontSendNotification);
+        k.label.setJustificationType(juce::Justification::centred);
+        k.label.setFont(juce::FontOptions(9.0f));
+        k.label.setColour(juce::Label::textColourId, juce::Colour(0xFF777788));
+    };
+
+    setupPlaceholder(dlyTime, "TIME", " ms", 0.3f);
+    setupPlaceholder(dlyFb,   "FB",   " %",  0.4f);
+    setupPlaceholder(dlyWet,  "WET",  " %",  0.2f);
+    setupPlaceholder(revSize, "SIZE", " %",  0.5f);
+    setupPlaceholder(revWet,  "WET",  " %",  0.1f);
+    setupPlaceholder(revMix,  "MIX",  " %",  0.0f);
+
+    // === Macro controls (placeholder) ===
+    setupPlaceholder(macro1, "M1", "", 0.0f);
+    setupPlaceholder(macro2, "M2", "", 0.0f);
+    setupPlaceholder(macro3, "M3", "", 0.0f);
+    setupPlaceholder(macro4, "M4", "", 0.0f);
+
+    // === Mod Matrix ===
     addAndMakeVisible (modLabel);
     modLabel.setText ("8-slot Mod Matrix  —  right-click knobs to assign", juce::dontSendNotification);
     modLabel.setJustificationType (juce::Justification::centred);
-    modLabel.setColour (juce::Label::textColourId, juce::Colour (0xFF555566));
-    modLabel.setFont (juce::FontOptions (10.0f));
+    modLabel.setColour (juce::Label::textColourId, juce::Colour(0xFF555566));
+    modLabel.setFont (juce::FontOptions(10.0f));
 }
 
 //==============================================================================
+// paint
+//==============================================================================
 void AnalogSynthAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xFF0D0D14));
+    g.fillAll (juce::Colour(0xFF0D0D14));
 
     // top bar
-    auto hdr = getLocalBounds().removeFromTop (48);
-    g.setColour (juce::Colour (0xFF12121C));
+    auto hdr = getLocalBounds().removeFromTop(48);
+    g.setColour (juce::Colour(0xFF12121C));
     g.fillRect (hdr);
-    g.setColour (juce::Colour (0xFF1E1E2E));
+    g.setColour (juce::Colour(0xFF1E1E2E));
     g.drawLine (0, hdr.getBottom(), getWidth(), hdr.getBottom(), 1.0f);
 
-    g.setColour (juce::Colour (0xFF00E5B0).withAlpha (0.9f));
-    g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
-    g.drawText ("ANALOG SYNTH", hdr.removeFromLeft (180).reduced (14, 0),
+    g.setColour (juce::Colour(0xFF00E5B0).withAlpha(0.9f));
+    g.setFont (juce::FontOptions(18.0f, juce::Font::bold));
+    g.drawText ("ANALOG SYNTH", hdr.removeFromLeft(200).reduced(14, 0),
                 juce::Justification::centredLeft);
 }
 
 //==============================================================================
-static juce::Rectangle<int> knobRect (juce::Rectangle<int> area, int ks, int lh)
-{
-    auto k = area.removeFromTop (ks).reduced (2);
-    auto l = area.removeFromTop (lh).reduced (2);
-    return k.withBottom (l.getBottom());
-}
-
+// resized — layout everything
+//==============================================================================
 void AnalogSynthAudioProcessorEditor::resized()
 {
     if (!built) { buildUI(); built = true; }
 
-    auto b    = getLocalBounds().reduced (10);
-    auto hdr  = b.removeFromTop (48);
+    auto b   = getLocalBounds().reduced(10);
+    auto hdr = b.removeFromTop(48);
 
-    // global knobs (top-right)
-    auto gb = hdr.removeFromRight (200).reduced (4);
+    // --- global knobs (top-right) ---
+    auto gb = hdr.removeFromRight(220).reduced(4);
     int  gw = gb.getWidth() / 3;
-    masterGain.slider.setBounds (gb.removeFromLeft (gw).reduced (2));
-    polyphony.slider.setBounds   (gb.removeFromLeft (gw).reduced (2));
-    pitchBend.slider.setBounds   (gb.reduced (2));
+    masterGain.slider.setBounds (gb.removeFromLeft(gw).reduced(2));
+    polyphony.slider.setBounds   (gb.removeFromLeft(gw).reduced(2));
+    pitchBend.slider.setBounds   (gb.reduced(2));
 
-    b.removeFromTop (4);
+    b.removeFromTop(4);
 
-    // === LEFT ===
-    auto L = b.removeFromLeft (b.getWidth() * 3 / 5);
+    // === LEFT COLUMN (60%) ===
+    auto L = b.removeFromLeft (static_cast<int>(b.getWidth() * 0.58f));
     auto R = b;
 
     // ----- OSCILLATORS -----
-    auto oscB = L.removeFromTop (380);
+    auto oscB = L.removeFromTop(390);
     oscPanel.setBounds (oscB);
-    auto oi = oscB.reduced (8, 30);
-    int  ocw = (oi.getWidth() - 2 * 4) / 3;
+    auto oi = oscB.reduced(kInset, kPanelPad);
+    int  ocw = (oi.getWidth() - 2 * kGap) / 3;
 
     auto layOsc = [&](juce::ComboBox& wv, juce::ComboBox& wt, WaveformPreview& wf,
                       KnobGroup& lv, KnobGroup& pt, KnobGroup& fn, KnobGroup& pn,
                       KnobGroup& un, KnobGroup& dt, KnobGroup& pw, KnobGroup& sc,
-                      juce::Rectangle<int> c)
-    {
-        wv.setBounds (c.removeFromTop (kComboH).reduced (1));
-        wt.setBounds (c.removeFromTop (kComboH).reduced (1));
-        wf.setBounds (c.removeFromTop (28).reduced (2));
+                      juce::Rectangle<int> c) {
+        wv.setBounds (c.removeFromTop(kComboH).reduced(1));
+        wt.setBounds (c.removeFromTop(kComboH).reduced(1));
+        wf.setBounds (c.removeFromTop(34).reduced(2));
 
-        // Knobs: 2 rows of 4
-        auto r1 = c.removeFromTop (56);
-        lv.slider.setBounds (r1.removeFromLeft (ocw).reduced (1));
-        pt.slider.setBounds (r1.removeFromLeft (ocw).reduced (1));
-        fn.slider.setBounds (r1.removeFromLeft (ocw).reduced (1));
-        pn.slider.setBounds (r1.reduced (1));
+        auto r1 = c.removeFromTop(56);
+        lv.slider.setBounds (r1.removeFromLeft(ocw).reduced(1));
+        pt.slider.setBounds (r1.removeFromLeft(ocw).reduced(1));
+        fn.slider.setBounds (r1.removeFromLeft(ocw).reduced(1));
+        pn.slider.setBounds (r1.reduced(1));
 
-        auto r2 = c.removeFromTop (56);
-        un.slider.setBounds (r2.removeFromLeft (ocw).reduced (1));
-        dt.slider.setBounds (r2.removeFromLeft (ocw).reduced (1));
-        pw.slider.setBounds (r2.removeFromLeft (ocw).reduced (1));
-        sc.slider.setBounds (r2.reduced (1));
+        auto r2 = c.removeFromTop(56);
+        un.slider.setBounds (r2.removeFromLeft(ocw).reduced(1));
+        dt.slider.setBounds (r2.removeFromLeft(ocw).reduced(1));
+        pw.slider.setBounds (r2.removeFromLeft(ocw).reduced(1));
+        sc.slider.setBounds (r2.reduced(1));
     };
 
-    auto o1 = oi.removeFromLeft (ocw); oi.removeFromLeft (4);
-    auto o2 = oi.removeFromLeft (ocw); oi.removeFromLeft (4);
+    auto o1 = oi.removeFromLeft(ocw); oi.removeFromLeft(kGap);
+    auto o2 = oi.removeFromLeft(ocw); oi.removeFromLeft(kGap);
     auto o3 = oi;
     layOsc (osc1Wave, osc1WT, wf1, osc1Lev,osc1Pit,osc1Fin,osc1Pan,osc1Uni,osc1Det,osc1PW,osc1Scn, o1);
     layOsc (osc2Wave, osc2WT, wf2, osc2Lev,osc2Pit,osc2Fin,osc2Pan,osc2Uni,osc2Det,osc2PW,osc2Scn, o2);
     layOsc (osc3Wave, osc3WT, wf3, osc3Lev,osc3Pit,osc3Fin,osc3Pan,osc3Uni,osc3Det,osc3PW,osc3Scn, o3);
 
-    // Sub + Noise (below osc)
-    auto sn = oscB.reduced (6, 0).removeFromBottom (48);
-    auto subRow  = sn.removeFromTop (22);
-    subWave.setBounds  (subRow.removeFromLeft (80).reduced (2));
-    subLev.slider.setBounds  (subRow.removeFromLeft (40).reduced (2));
-    subPit.slider.setBounds  (subRow.removeFromLeft (40).reduced (2));
-    sn.removeFromTop (2);
-    noiseType.setBounds (sn.removeFromLeft (70).reduced (2));
-    noiseLev.slider.setBounds (sn.removeFromLeft (40).reduced (2));
+    // Sub + Noise (strip below osc)
+    auto snArea = oscB.reduced(kInset, 0).removeFromBottom(52);
+    // Sub row
+    auto subRow = snArea.removeFromTop(24);
+    subWave.setBounds (subRow.removeFromLeft(68).reduced(1));
+    subLev.slider.setBounds (subRow.removeFromLeft(40).reduced(1));
+    subPit.slider.setBounds (subRow.removeFromLeft(40).reduced(1));
+    // Noise row
+    auto noiseRow = snArea.removeFromTop(24);
+    noiseType.setBounds (noiseRow.removeFromLeft(68).reduced(1));
+    noiseLev.slider.setBounds (noiseRow.removeFromLeft(40).reduced(1));
 
-    L.removeFromTop (4);
+    L.removeFromTop(4);
 
     // ----- FILTER -----
-    auto filtB = L.removeFromTop (150);
+    auto filtB = L;
     filtPanel.setBounds (filtB);
-    auto fi = filtB.reduced (8, 30);
-    filtType.setBounds (fi.removeFromTop (kComboH).reduced (2));
-    auto fkr = fi;
-    int  fkw = fi.getWidth() / 5;
-    auto placeK = [&](KnobGroup& k) {
-        k.slider.setBounds (fkr.removeFromLeft (fkw).reduced (2));
-        k.label.setBounds (k.slider.getBounds().withY (k.slider.getBottom()).withHeight (kLabelH));
-    };
-    placeK (filtCut); placeK (filtRes); placeK (filtDrv); placeK (filtKey); placeK (filtVel);
+    auto fi = filtB.reduced(kInset, kPanelPad);
+    filtType.setBounds (fi.removeFromTop(kComboH).reduced(2));
 
-    // === RIGHT ===
-    // ----- AMP ENV -----
-    auto ampB = R.removeFromTop (160);
+    // 5 knobs in a row
+    auto fkr = fi.removeFromTop(56);
+    int  fkw = fkr.getWidth() / 5;
+    filtCut.slider.setBounds (fkr.removeFromLeft(fkw).reduced(1));
+    filtRes.slider.setBounds (fkr.removeFromLeft(fkw).reduced(1));
+    filtDrv.slider.setBounds (fkr.removeFromLeft(fkw).reduced(1));
+    filtKey.slider.setBounds (fkr.removeFromLeft(fkw).reduced(1));
+    filtVel.slider.setBounds (fkr.reduced(1));
+
+    // filter response curve
+    auto fCurveArea = fi.reduced(4, 0);
+    fCurveArea.removeFromTop(4);
+    filterCurve.setBounds (fCurveArea);
+
+    // update filter curve display
+    filterCurve.setParams (
+        filtType.getSelectedId() - 1,
+        apvts.getRawParameterValue("filterCutoff")->load(),
+        apvts.getRawParameterValue("filterResonance")->load()
+    );
+
+    // === RIGHT COLUMN (40%) ===
+
+    // ----- AMP ENVELOPE -----
+    auto ampB = R.removeFromTop(210);
     ampPanel.setBounds (ampB);
-    auto ai = ampB.reduced (8, 30);
-    int  akw = ai.getWidth() / 5;
-    auto arow = ai.removeFromTop (56);
-    ampA.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
-    ampD.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
-    ampS.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
-    ampR.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
-    ampVel.slider.setBounds (arow.reduced (2));
-    // labels
-    int ly = ampA.slider.getBottom();
-    auto lrow = ai.removeFromTop (kLabelH);
-    ampA.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
-    ampD.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
-    ampS.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
-    ampR.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
-    ampVel.label.setBounds (lrow.reduced (2).withY (ly));
+    auto ai = ampB.reduced(kInset, kPanelPad);
 
-    R.removeFromTop (4);
+    // ADSR curve
+    auto ampCurveArea = ai.removeFromTop(90).reduced(4);
+    ampCurve.setBounds (ampCurveArea);
 
-    // ----- FILT ENV -----
-    auto fenvB = R.removeFromTop (160);
+    // update amp curve
+    ampCurve.setParams (
+        apvts.getRawParameterValue("ampAttack")->load(),
+        apvts.getRawParameterValue("ampDecay")->load(),
+        apvts.getRawParameterValue("ampSustain")->load(),
+        apvts.getRawParameterValue("ampRelease")->load()
+    );
+
+    // 5 knobs
+    auto akr = ai.removeFromTop(56);
+    int  akw = akr.getWidth() / 5;
+    ampA.slider.setBounds (akr.removeFromLeft(akw).reduced(1));
+    ampD.slider.setBounds (akr.removeFromLeft(akw).reduced(1));
+    ampS.slider.setBounds (akr.removeFromLeft(akw).reduced(1));
+    ampR.slider.setBounds (akr.removeFromLeft(akw).reduced(1));
+    ampVel.slider.setBounds (akr.reduced(1));
+
+    R.removeFromTop(4);
+
+    // ----- FILTER ENVELOPE -----
+    auto fenvB = R.removeFromTop(210);
     fenvPanel.setBounds (fenvB);
-    auto fei = fenvB.reduced (8, 30);
-    int  few = fei.getWidth() / 5;
-    auto ferow = fei.removeFromTop (56);
-    fenvA.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
-    fenvD.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
-    fenvS.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
-    fenvR.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
-    fenvAmt.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
-    // labels + row 2
-    int fly = fenvA.slider.getBottom();
-    auto flrow = fei.removeFromTop (kLabelH);
-    fenvA.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
-    fenvD.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
-    fenvS.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
-    fenvR.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
-    fenvAmt.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
+    auto fei = fenvB.reduced(kInset, kPanelPad);
 
-    R.removeFromTop (4);
+    // ADSR curve
+    auto fenvCurveArea = fei.removeFromTop(90).reduced(4);
+    fenvCurve.setBounds (fenvCurveArea);
+
+    // update filter env curve
+    fenvCurve.setParams (
+        apvts.getRawParameterValue("filtAttack")->load(),
+        apvts.getRawParameterValue("filtDecay")->load(),
+        apvts.getRawParameterValue("filtSustain")->load(),
+        apvts.getRawParameterValue("filtRelease")->load()
+    );
+
+    // 6 knobs in a row (ATT DEC SUS REL AMT VEL)
+    auto fekr = fei.removeFromTop(56);
+    int  few  = fekr.getWidth() / 6;
+    fenvA.slider.setBounds (fekr.removeFromLeft(few).reduced(1));
+    fenvD.slider.setBounds (fekr.removeFromLeft(few).reduced(1));
+    fenvS.slider.setBounds (fekr.removeFromLeft(few).reduced(1));
+    fenvR.slider.setBounds (fekr.removeFromLeft(few).reduced(1));
+    fenvAmt.slider.setBounds (fekr.removeFromLeft(few).reduced(1));
+    fenvVel.slider.setBounds (fekr.reduced(1));
+
+    R.removeFromTop(4);
 
     // ----- LFOs -----
-    auto lfoB = R.removeFromTop (130);
+    auto lfoB = R.removeFromTop(130);
     lfoPanel.setBounds (lfoB);
-    auto li = lfoB.reduced (8, 30);
-    auto lHalfW = li.getWidth() / 2 - 2;
+    auto li = lfoB.reduced(kInset, kPanelPad);
+    int  lHalfW = (li.getWidth() - kGap) / 2;
 
     auto layLFO = [&](juce::ComboBox& wv, KnobGroup& rt, KnobGroup& am, KnobGroup& dl, KnobGroup& fd,
-                      juce::Rectangle<int> c)
-    {
-        wv.setBounds (c.removeFromTop (kComboH).reduced (2));
-        auto kr = c.removeFromTop (56);
-        int  kw = kr.getWidth() / 4;
-        rt.slider.setBounds (kr.removeFromLeft (kw).reduced (1));
-        am.slider.setBounds (kr.removeFromLeft (kw).reduced (1));
-        dl.slider.setBounds (kr.removeFromLeft (kw).reduced (1));
-        fd.slider.setBounds (kr.reduced (1));
+                      juce::Rectangle<int> c) {
+        wv.setBounds (c.removeFromTop(kComboH).reduced(2));
+        auto kr = c.removeFromTop(56);
+        int  kw  = kr.getWidth() / 4;
+        rt.slider.setBounds (kr.removeFromLeft(kw).reduced(1));
+        am.slider.setBounds (kr.removeFromLeft(kw).reduced(1));
+        dl.slider.setBounds (kr.removeFromLeft(kw).reduced(1));
+        fd.slider.setBounds (kr.reduced(1));
     };
 
-    layLFO (lfo1Wave, lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade, li.removeFromLeft (lHalfW));
-    li.removeFromLeft (4);
+    layLFO (lfo1Wave, lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade, li.removeFromLeft(lHalfW));
+    li.removeFromLeft(kGap);
     layLFO (lfo2Wave, lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade, li);
 
+    R.removeFromTop(4);
+
+    // ----- FX -----
+    auto fxB = R.removeFromTop(100);
+    fxPanel.setBounds (fxB);
+    auto fxi = fxB.reduced(kInset, kPanelPad);
+
+    // Label row
+    auto fxlrow = fxi.removeFromTop(14);
+    // "DELAY" label
+    auto dlyLabel = fxlrow.removeFromLeft(fxlrow.getWidth() / 2).reduced(2, 0);
+    // "REVERB" label
+    auto revLabel = fxlrow.reduced(2, 0);
+
+    auto fxDly = fxi.removeFromTop(56);
+    int  fdw = fxDly.getWidth() / 6;
+    dlyTime.slider.setBounds (fxDly.removeFromLeft(fdw).reduced(1));
+    dlyFb.slider.setBounds   (fxDly.removeFromLeft(fdw).reduced(1));
+    dlyWet.slider.setBounds   (fxDly.removeFromLeft(fdw).reduced(1));
+    revSize.slider.setBounds   (fxDly.removeFromLeft(fdw).reduced(1));
+    revWet.slider.setBounds    (fxDly.removeFromLeft(fdw).reduced(1));
+    revMix.slider.setBounds    (fxDly.reduced(1));
+
+    R.removeFromTop(4);
+
+    // ----- MACRO -----
+    auto macB = R.removeFromTop(70);
+    macroPanel.setBounds (macB);
+    auto mac = macB.reduced(kInset, kPanelPad);
+    int  mkw = mac.getWidth() / 4;
+    macro1.slider.setBounds (mac.removeFromLeft(mkw).reduced(2));
+    macro2.slider.setBounds (mac.removeFromLeft(mkw).reduced(2));
+    macro3.slider.setBounds (mac.removeFromLeft(mkw).reduced(2));
+    macro4.slider.setBounds (mac.reduced(2));
+
     // ----- MOD MATRIX -----
-    R.removeFromTop (4);
+    R.removeFromTop(4);
     modPanel.setBounds (R);
-    modLabel.setBounds (R.reduced (8, 26).removeFromBottom (20));
+    modLabel.setBounds (R.reduced(kInset, kPanelPad).removeFromBottom(20));
 }
