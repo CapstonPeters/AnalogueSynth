@@ -2,549 +2,510 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-// SynthLookAndFeel
+// SynthLookAndFeel — premium dark theme
 //==============================================================================
 class AnalogSynthAudioProcessorEditor::SynthLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     SynthLookAndFeel()
     {
-        setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xFF00D4AA));
-        setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xFF333344));
-        setColour(juce::Slider::thumbColourId, juce::Colours::white);
-        setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xFF252535));
-        setColour(juce::ComboBox::outlineColourId, juce::Colour(0xFF333344));
-        setColour(juce::ComboBox::textColourId, juce::Colours::white);
-        setColour(juce::Label::textColourId, juce::Colour(0xFFBBBBBB));
-        setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF2ECC71));
-        setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFFE74C3C));
-        setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-        setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+        setColour (juce::Slider::rotarySliderFillColourId,    juce::Colour(0xFF00E5B0));
+        setColour (juce::Slider::rotarySliderOutlineColourId,  juce::Colour(0xFF2A2A3A));
+        setColour (juce::Slider::thumbColourId,                juce::Colours::white);
+        setColour (juce::ComboBox::backgroundColourId,         juce::Colour(0xFF1E1E2E));
+        setColour (juce::ComboBox::outlineColourId,            juce::Colour(0xFF333344));
+        setColour (juce::ComboBox::textColourId,               juce::Colours::white);
+        setColour (juce::ComboBox::arrowColourId,              juce::Colour(0xFF888888));
+        setColour (juce::Label::textColourId,                  juce::Colour(0xFF9999AA));
+        setColour (juce::PopupMenu::backgroundColourId,        juce::Colour(0xFF1E1E2E));
+        setColour (juce::PopupMenu::textColourId,              juce::Colour(0xFFCCCCCC));
+        setColour (juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xFF00E5B0).withAlpha(0.3f));
+        setColour (juce::PopupMenu::highlightedTextColourId,   juce::Colours::white);
     }
 
-    void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
-                          float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
-                          juce::Slider& slider) override
+    void drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h,
+                           float pos, float start, float end, juce::Slider& s) override
     {
-        auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(4);
-        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
-        auto centre = bounds.getCentre();
+        auto r   = juce::Rectangle<float>((float)x, (float)y, (float)w, (float)h).reduced (3);
+        auto rad = juce::jmin (r.getWidth(), r.getHeight()) / 2.0f;
+        auto c   = r.getCentre();
 
-        g.setColour(juce::Colour(0xFF1A1A2A));
-        g.fillEllipse(bounds);
+        // outer ring
+        g.setColour (juce::Colour (0xFF2A2A3A));
+        g.drawEllipse (r, 1.5f);
 
-        g.setColour(juce::Colour(0xFF333344));
-        g.drawEllipse(bounds, 2.0f);
-
-        auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+        // filled arc
+        auto angle = start + pos * (end - start);
         juce::Path arc;
-        arc.addCentredArc(centre.x, centre.y, radius - 6, radius - 6, 0.0f,
-                          rotaryStartAngle, angle, true);
+        arc.addCentredArc (c.x, c.y, rad - 5, rad - 5, 0, start, angle, true);
+        g.setColour (findColour (juce::Slider::rotarySliderFillColourId).withAlpha (0.85f));
+        g.strokePath (arc, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-        g.setColour(findColour(juce::Slider::rotarySliderFillColourId).withAlpha(0.8f));
-        g.strokePath(arc, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        // indicator dot
+        auto dotPos = c.getPointOnCircumference (rad - 10, angle);
+        g.setColour (juce::Colours::white);
+        g.fillEllipse (dotPos.x - 3, dotPos.y - 3, 6, 6);
 
-        juce::Path indicator;
-        indicator.addRectangle(-2.0f, -radius + 8, 4.0f, radius - 16);
-        g.setColour(juce::Colours::white);
-        g.fillPath(indicator, juce::AffineTransform::rotation(angle).translated(centre));
-
-        g.setColour(juce::Colour(0xFF1A1A2A));
-        g.fillEllipse(centre.x - 6, centre.y - 6, 12, 12);
-        g.setColour(juce::Colour(0xFF333344));
-        g.drawEllipse(centre.x - 6, centre.y - 6, 12, 12, 1.5f);
+        // centre dot
+        g.setColour (juce::Colour (0xFF15151E));
+        g.fillEllipse (c.x - 5, c.y - 5, 10, 10);
+        g.setColour (juce::Colour (0xFF2A2A3A));
+        g.drawEllipse (c.x - 5, c.y - 5, 10, 10, 1.0f);
     }
 
-    juce::Label* createSliderTextBox(juce::Slider& slider) override
+    juce::Label* createSliderTextBox (juce::Slider& s) override
     {
-        auto l = LookAndFeel_V4::createSliderTextBox(slider);
-        l->setColour(juce::Label::outlineColourId, juce::Colour(0x00000000));
-        l->setColour(juce::Label::backgroundColourId, juce::Colour(0x801A1A2A));
-        l->setFont(juce::FontOptions(11.0f));
-        l->setJustificationType(juce::Justification::centred);
+        auto* l = LookAndFeel_V4::createSliderTextBox (s);
+        l->setColour (juce::Label::outlineColourId,      juce::Colours::transparentBlack);
+        l->setColour (juce::Label::backgroundColourId,   juce::Colour (0x401A1A2A));
+        l->setColour (juce::Label::textColourId,         juce::Colour (0xFFBBBBCC));
+        l->setFont (juce::FontOptions (10.0f));
+        l->setJustificationType (juce::Justification::centred);
         return l;
     }
 
-    void drawComboBox(juce::Graphics& g, int width, int height, bool,
-                      int buttonX, int buttonY, int buttonW, int buttonH,
-                      juce::ComboBox& box) override
+    void drawComboBox (juce::Graphics& g, int w, int h, bool,
+                       int bx, int by, int bw, int bh, juce::ComboBox& box) override
     {
-        juce::Rectangle<int> boxBounds(0, 0, width, height);
-        g.setColour(findColour(juce::ComboBox::backgroundColourId));
-        g.fillRoundedRectangle(boxBounds.toFloat(), 4.0f);
-        g.setColour(findColour(juce::ComboBox::outlineColourId));
-        g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f), 4.0f, 1.5f);
+        auto r = juce::Rectangle<int> (0, 0, w, h);
+        g.setColour (findColour (juce::ComboBox::backgroundColourId));
+        g.fillRoundedRectangle (r.toFloat(), 4.0f);
+        g.setColour (findColour (juce::ComboBox::outlineColourId));
+        g.drawRoundedRectangle (r.toFloat().reduced (0.5f), 4.0f, 1.0f);
 
         juce::Path arrow;
-        arrow.addTriangle(0, 0, 6, 0, 3, 4);
-        g.setColour(findColour(juce::ComboBox::textColourId));
-        g.fillPath(arrow, juce::AffineTransform::translation(width - buttonW + (buttonW - 6) / 2.0f,
-                                                              (height - 4) / 2.0f));
+        arrow.addTriangle (0, 0, 8, 0, 4, 5);
+        g.setColour (findColour (juce::ComboBox::arrowColourId));
+        g.fillPath (arrow, juce::AffineTransform::translation ((float)(w - 16), (float)((h - 4) / 2)));
     }
 };
 
 //==============================================================================
-// Helpers
+// SectionPanel
 //==============================================================================
-static void styleCombo(juce::ComboBox& combo, juce::LookAndFeel* laf)
+AnalogSynthAudioProcessorEditor::SectionPanel::SectionPanel (const juce::String& t, juce::Colour a)
+    : title (t), accent (a) {}
+
+void AnalogSynthAudioProcessorEditor::SectionPanel::paint (juce::Graphics& g)
 {
-    combo.setLookAndFeel(laf);
+    auto b = getLocalBounds().toFloat();
+    // gradient card
+    juce::ColourGradient grad (juce::Colour (0xFF1C1C2C), b.getTopLeft(),
+                               juce::Colour (0xFF161622), b.getBottomLeft(), false);
+    g.setGradientFill (grad);
+    g.fillRoundedRectangle (b.reduced (1), 8.0f);
+
+    // accent bar at top
+    g.setColour (accent.withAlpha (0.6f));
+    g.fillRoundedRectangle (b.removeFromTop (2).reduced (4, 0), 8.0f);
+
+    // title
+    g.setColour (accent);
+    g.setFont (juce::FontOptions (12.0f, juce::Font::bold));
+    g.drawText (title, getLocalBounds().removeFromTop (26).reduced (10, 0),
+                juce::Justification::centredLeft);
+
+    // subtle border
+    g.setColour (juce::Colour (0xFF2A2A3A));
+    g.drawRoundedRectangle (b.reduced (0.5f), 8.0f, 0.5f);
 }
-
-static void setupCombo(juce::ComboBox& combo, const juce::String& paramID,
-                        juce::AudioProcessorValueTreeState& apvts,
-                        std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>& attachment,
-                        const juce::StringArray& choices, int defaultIdx,
-                        juce::Component* parent, juce::LookAndFeel* laf)
-{
-    if (parent) parent->addAndMakeVisible(combo);
-    styleCombo(combo, laf);
-    for (int i = 0; i < choices.size(); ++i) combo.addItem(choices[i], i + 1);
-    combo.setSelectedId(defaultIdx + 1);
-    attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, paramID, combo);
-}
-
-//==============================================================================
-// SectionPanel implementation
-//==============================================================================
-AnalogSynthAudioProcessorEditor::SectionPanel::SectionPanel(const juce::String& title, juce::Colour accentColour)
-    : titleText(title), accent(accentColour) {}
-
 
 //==============================================================================
 // WaveformPreview
-void AnalogSynthAudioProcessorEditor::WaveformPreview::paint(juce::Graphics& g)
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::WaveformPreview::paint (juce::Graphics& g)
 {
-    auto bounds = getLocalBounds().toFloat();
-    g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.fillRoundedRectangle(bounds, 4.0f);
-    g.setColour(juce::Colours::cyan.withAlpha(0.7f));
-    
-    float w = bounds.getWidth();
-    float h = bounds.getHeight();
-    float midY = h / 2.0f;
-    float amp = h * 0.35f;
-    
-    juce::Path path;
-    path.startNewSubPath(0, midY);
-    
-    if (waveType == "Sine")
-    {
+    auto b    = getLocalBounds().toFloat();
+    auto w    = b.getWidth();
+    auto h    = b.getHeight();
+    auto mid  = h / 2.0f;
+    auto amp  = h * 0.35f;
+
+    g.setColour (juce::Colours::black.withAlpha (0.4f));
+    g.fillRoundedRectangle (b, 3.0f);
+
+    juce::Path p;
+    p.startNewSubPath (0, mid);
+
+    if (waveType == "Sine") {
         for (float x = 0; x <= w; x += 1.0f)
-            path.lineTo(x, midY - std::sin(x / w * juce::MathConstants<float>::twoPi * 2.0f) * amp);
-    }
-    else if (waveType == "Triangle" || waveType == "Triangle")
-    {
-        for (float x = 0; x <= w; x += 1.0f)
-        {
-            float phase = std::fmod(x / w, 1.0f);
-            float val = 4.0f * std::fabs(phase - 0.5f) - 1.0f;
-            path.lineTo(x, midY - val * amp);
+            p.lineTo (x, mid - std::sin (x / w * juce::MathConstants<float>::twoPi * 2.0f) * amp);
+    } else if (waveType == "Triangle") {
+        for (float x = 0; x <= w; x += 1.0f) {
+            float ph = std::fmod (x / w, 1.0f);
+            p.lineTo (x, mid - (4.0f * std::fabs (ph - 0.5f) - 1.0f) * amp);
         }
-    }
-    else if (waveType == "Saw")
-    {
-        for (float x = 0; x <= w; x += 1.0f)
-        {
-            float phase = std::fmod(x / w, 1.0f);
-            path.lineTo(x, midY - (phase * 2.0f - 1.0f) * amp);
+    } else if (waveType == "Saw") {
+        for (float x = 0; x <= w; x += 1.0f) {
+            float ph = std::fmod (x / w, 1.0f);
+            p.lineTo (x, mid - (ph * 2.0f - 1.0f) * amp);
         }
-    }
-    else if (waveType == "Square" || waveType == "Pulse")
-    {
+    } else if (waveType == "Square") {
         for (float x = 0; x <= w; x += 1.0f)
-        {
-            float phase = std::fmod(x / w, 1.0f);
-            float val = phase < 0.5f ? 1.0f : -1.0f;
-            path.lineTo(x, midY - val * amp);
-        }
-    }
-    else if (waveType == "Noise" || waveType == "White" || waveType == "Pink")
-    {
+            p.lineTo (x, mid - (std::fmod (x / w, 1.0f) < 0.5f ? 1.0f : -1.0f) * amp);
+    } else if (waveType == "Noise") {
         juce::Random rng;
         for (float x = 0; x <= w; x += 1.0f)
-            path.lineTo(x, midY + (rng.nextFloat() - 0.5f) * amp * 2.0f);
-    }
-    else if (waveType == "Wavetable")
-    {
-        // Show a complex waveform
-        for (float x = 0; x <= w; x += 1.0f)
-        {
-            float phase = x / w;
-            float val = std::sin(phase * juce::MathConstants<float>::twoPi * 3.0f) * 0.5f
-                      + std::sin(phase * juce::MathConstants<float>::twoPi * 7.0f) * 0.3f
-                      + std::sin(phase * juce::MathConstants<float>::twoPi * 12.0f) * 0.2f;
-            path.lineTo(x, midY - val * amp);
+            p.lineTo (x, mid + (rng.nextFloat() - 0.5f) * amp * 2.0f);
+    } else if (waveType == "Wavetable") {
+        for (float x = 0; x <= w; x += 1.0f) {
+            float ph = x / w;
+            float val = std::sin (ph * juce::MathConstants<float>::twoPi * 3.0f) * 0.5f
+                      + std::sin (ph * juce::MathConstants<float>::twoPi * 7.0f) * 0.3f
+                      + std::sin (ph * juce::MathConstants<float>::twoPi * 12.0f) * 0.2f;
+            p.lineTo (x, mid - val * amp);
         }
     }
-    else
+    g.setColour (juce::Colour (0xFF00E5B0).withAlpha (0.7f));
+    g.strokePath (p, juce::PathStrokeType (1.0f));
+}
+
+//==============================================================================
+// KnobGroup
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::KnobGroup::setup (
+    const juce::String& id, juce::AudioProcessorValueTreeState& a,
+    float min, float max, float step, float def,
+    const juce::String& txt, const juce::String& suffix,
+    juce::Component* parent, juce::LookAndFeel* lf)
+{
+    if (parent)
     {
-        // Default saw
-        for (float x = 0; x <= w; x += 1.0f)
-        {
-            float phase = std::fmod(x / w, 1.0f);
-            path.lineTo(x, midY - (phase * 2.0f - 1.0f) * amp);
-        }
+        parent->addAndMakeVisible (slider);
+        parent->addAndMakeVisible (label);
     }
-    
-    g.strokePath(path, juce::PathStrokeType(1.3f));
-}
 
-void AnalogSynthAudioProcessorEditor::SectionPanel::paint(juce::Graphics& g)
-{
-    auto bounds = getLocalBounds().toFloat();
-    juce::ColourGradient gradient(juce::Colour(0xFF222232), bounds.getTopLeft(),
-                                  juce::Colour(0xFF1A1A25), bounds.getBottomLeft(), false);
-    g.setGradientFill(gradient);
-    g.fillRoundedRectangle(bounds.reduced(1), 8.0f);
+    slider.setLookAndFeel (lf);
+    slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+    slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 46, 18);
+    slider.setTextValueSuffix (suffix);
+    slider.setRange (min, max, step);
+    slider.setValue (def);
 
-    g.setColour(accent);
-    auto accentRect = bounds.removeFromTop(2).reduced(2, 1);
-    g.fillRoundedRectangle(accentRect, 8.0f);
+    label.setText (txt, juce::dontSendNotification);
+    label.setJustificationType (juce::Justification::centred);
+    label.setFont (juce::FontOptions (9.0f));
+    label.setColour (juce::Label::textColourId, juce::Colour (0xFF777788));
 
-    g.setColour(juce::Colour(0xFF2A2A3A));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), 8.0f, 1.0f);
-
-    g.setColour(accent);
-    g.setFont(juce::FontOptions(13.0f, juce::Font::bold));
-    g.drawText(titleText, getLocalBounds().removeFromTop(28).reduced(12, 0),
-               juce::Justification::centredLeft);
+    att = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (a, id, slider);
 }
 
 //==============================================================================
-// KnobGroup implementation
+// Helpers
 //==============================================================================
-void AnalogSynthAudioProcessorEditor::KnobGroup::setup(const juce::String& paramID, juce::AudioProcessorValueTreeState& apvts,
-                  float min, float max, float interval, float def,
-                  const juce::String& labelText, const juce::String& suffix,
-                  juce::Component* parent, juce::LookAndFeel* laf)
+static void setCombo (juce::ComboBox& cb, const juce::String& id,
+                      juce::AudioProcessorValueTreeState& a,
+                      std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>& att,
+                      const juce::StringArray& choices, int defIdx,
+                      juce::Component* parent, juce::LookAndFeel* lf)
 {
-    if (parent) parent->addAndMakeVisible(slider);
-    slider.setLookAndFeel(laf);
-    slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 54, 20);
-    slider.setTextValueSuffix(suffix);
-    slider.setRange(min, max, interval);
-    slider.setValue(def);
-
-    if (parent) parent->addAndMakeVisible(label);
-    label.setText(labelText, juce::dontSendNotification);
-    label.setJustificationType(juce::Justification::centred);
-    label.setFont(juce::FontOptions(10.0f));
-    label.setColour(juce::Label::textColourId, juce::Colour(0xFF888888));
-
-    attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, paramID, slider);
-}
-
-void AnalogSynthAudioProcessorEditor::KnobGroup::setBounds(juce::Rectangle<int> area, int knobSize, int labelHeight)
-{
-    slider.setBounds(area.removeFromTop(knobSize).reduced(2));
-    label.setBounds(area.removeFromTop(labelHeight).reduced(2));
+    if (parent) parent->addAndMakeVisible (cb);
+    cb.setLookAndFeel (lf);
+    for (int i = 0; i < choices.size(); ++i)
+        cb.addItem (choices[i], i + 1);
+    cb.setSelectedId (defIdx + 1, juce::dontSendNotification);
+    att = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (a, id, cb);
 }
 
 //==============================================================================
-// AnalogSynthAudioProcessorEditor
+// Editor
 //==============================================================================
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p), apvts (p.getAPVTS())
+    : AudioProcessorEditor (&p), proc (p), apvts (p.getAPVTS())
 {
-    // Minimal constructor — defer all UI construction to avoid
-    // Windows static-initialization / thread-init crashes.
-    // The full UI is built on first resized() when the host's
-    // GUI thread is fully ready.
-    setSize (1100, 780);
+    setSize (1050, 760);
     setResizable (true, true);
 }
 
 AnalogSynthAudioProcessorEditor::~AnalogSynthAudioProcessorEditor()
 {
-    setLookAndFeel(nullptr);
+    setLookAndFeel (nullptr);
 }
 
 void AnalogSynthAudioProcessorEditor::buildUI()
 {
-    // Create look and feel
-    lookAndFeel = std::make_unique<SynthLookAndFeel>();
+    laf = std::make_unique<SynthLookAndFeel>();
 
-    // === SECTION PANELS FIRST — so they're drawn UNDERNEATH the knobs ===
-    oscPanel     = std::make_unique<SectionPanel>("OSCILLATORS",      juce::Colour(0xFF00D4AA));
-    filterPanel  = std::make_unique<SectionPanel>("FILTER",           juce::Colour(0xFFFF8844));
-    ampEnvPanel  = std::make_unique<SectionPanel>("AMP ENVELOPE",     juce::Colour(0xFF88AAFF));
-    filtEnvPanel = std::make_unique<SectionPanel>("FILTER ENVELOPE",  juce::Colour(0xFFAA88FF));
-    lfoPanel     = std::make_unique<SectionPanel>("LFOS",             juce::Colour(0xFFFFAA88));
-    modPanel     = std::make_unique<SectionPanel>("MODULATION",       juce::Colour(0xFF888888));
+    // panels
+    addAndMakeVisible (oscPanel);
+    addAndMakeVisible (filtPanel);
+    addAndMakeVisible (ampPanel);
+    addAndMakeVisible (fenvPanel);
+    addAndMakeVisible (lfoPanel);
+    addAndMakeVisible (modPanel);
 
-    addAndMakeVisible(oscPanel.get());
-    addAndMakeVisible(filterPanel.get());
-    addAndMakeVisible(ampEnvPanel.get());
-    addAndMakeVisible(filtEnvPanel.get());
-    addAndMakeVisible(lfoPanel.get());
-    addAndMakeVisible(modPanel.get());
+    // Global
+    masterGain.setup ("masterGain",      apvts, 0.0f, 1.0f, 0.01f, 0.5f,  "GAIN",  " dB", this, laf.get());
+    polyphony.setup ("polyphony",        apvts, 1.0f, 16.0f, 1.0f, 8.0f,  "VOICES","",    this, laf.get());
+    pitchBend.setup  ("pitchBendRange",  apvts, 0.0f, 24.0f, 0.5f, 2.0f,  "BEND",  " st", this, laf.get());
 
-    // Waveform previews
-    wf1 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf1.get());
-    wf2 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf2.get());
-    wf3 = std::make_unique<WaveformPreview>(); addAndMakeVisible(wf3.get());
+    // --- Osc 1
+    setCombo (osc1Wave,  "osc1Wave",  apvts, osc1WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
+    setCombo (osc1WT,    "osc1WavetableIndex", apvts, osc1WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
+    osc1Lev.setup ("osc1Level",        apvts, 0.0f, 1.0f, 0.01f, 0.7f,   "LEVEL",  "",     this, laf.get());
+    osc1Pit.setup ("osc1Pitch",        apvts, -24.0f,24.0f,1.0f,0.0f,    "PITCH",  " st",  this, laf.get());
+    osc1Fin.setup ("osc1FineTune",     apvts, -50.0f,50.0f,1.0f,0.0f,    "FINE",   " ct",  this, laf.get());
+    osc1Pan.setup ("osc1Pan",          apvts, -1.0f, 1.0f, 0.01f,0.0f,   "PAN",    "",     this, laf.get());
+    osc1Uni.setup ("osc1Unison",       apvts, 1.0f, 8.0f, 1.0f, 1.0f,    "UNISON", "",     this, laf.get());
+    osc1Det.setup ("osc1Detune",       apvts, 0.0f, 50.0f,1.0f,0.0f,     "DETUNE", " ct",  this, laf.get());
+    osc1PW.setup  ("osc1PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
+    osc1Scn.setup ("osc1Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
+    addAndMakeVisible (wf1);
 
-    // === TOP BAR ===
-    addAndMakeVisible(waveTypeComboBox);
-    waveTypeComboBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Noise"}, 1);
-    waveTypeComboBox.setSelectedId(3);
-    waveTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "osc1Wave", waveTypeComboBox);
+    // --- Osc 2
+    setCombo (osc2Wave,  "osc2Wave",  apvts, osc2WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
+    setCombo (osc2WT,    "osc2WavetableIndex", apvts, osc2WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
+    osc2Lev.setup ("osc2Level",        apvts, 0.0f, 1.0f, 0.01f, 0.5f,   "LEVEL",  "",     this, laf.get());
+    osc2Pit.setup ("osc2Pitch",        apvts, -24.0f,24.0f,1.0f,0.0f,    "PITCH",  " st",  this, laf.get());
+    osc2Fin.setup ("osc2FineTune",     apvts, -50.0f,50.0f,1.0f,0.0f,    "FINE",   " ct",  this, laf.get());
+    osc2Pan.setup ("osc2Pan",          apvts, -1.0f, 1.0f, 0.01f,0.0f,   "PAN",    "",     this, laf.get());
+    osc2Uni.setup ("osc2Unison",       apvts, 1.0f, 8.0f, 1.0f, 1.0f,    "UNISON", "",     this, laf.get());
+    osc2Det.setup ("osc2Detune",       apvts, 0.0f, 50.0f,1.0f,0.0f,     "DETUNE", " ct",  this, laf.get());
+    osc2PW.setup  ("osc2PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
+    osc2Scn.setup ("osc2Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
+    addAndMakeVisible (wf2);
 
-    // Global knobs (header)
-    masterGainKnob = std::make_unique<KnobGroup>(); masterGainKnob->setup("masterGain", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "GAIN", " dB", this, lookAndFeel.get());
-    polyphonyKnob = std::make_unique<KnobGroup>(); polyphonyKnob->setup("polyphony", apvts, 1.0f, 16.0f, 1.0f, 8.0f, "VOICES", "", this, lookAndFeel.get());
-    pitchBendKnob = std::make_unique<KnobGroup>(); pitchBendKnob->setup("pitchBendRange", apvts, 0.0f, 24.0f, 0.5f, 2.0f, "PB RANGE", " st", this, lookAndFeel.get());
+    // --- Osc 3
+    setCombo (osc3Wave,  "osc3Wave",  apvts, osc3WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
+    setCombo (osc3WT,    "osc3WavetableIndex", apvts, osc3WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
+    osc3Lev.setup ("osc3Level",        apvts, 0.0f, 1.0f, 0.01f, 0.3f,   "LEVEL",  "",     this, laf.get());
+    osc3Pit.setup ("osc3Pitch",        apvts, -24.0f,24.0f,1.0f,0.0f,    "PITCH",  " st",  this, laf.get());
+    osc3Fin.setup ("osc3FineTune",     apvts, -50.0f,50.0f,1.0f,0.0f,    "FINE",   " ct",  this, laf.get());
+    osc3Pan.setup ("osc3Pan",          apvts, -1.0f, 1.0f, 0.01f,0.0f,   "PAN",    "",     this, laf.get());
+    osc3Uni.setup ("osc3Unison",       apvts, 1.0f, 8.0f, 1.0f, 1.0f,    "UNISON", "",     this, laf.get());
+    osc3Det.setup ("osc3Detune",       apvts, 0.0f, 50.0f,1.0f,0.0f,     "DETUNE", " ct",  this, laf.get());
+    osc3PW.setup  ("osc3PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
+    osc3Scn.setup ("osc3Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
+    addAndMakeVisible (wf3);
 
-    // === OSCILLATORS ===
-    setupCombo(osc1Wave, "osc1Wave", apvts, osc1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
-    setupCombo(osc1Wavetable, "osc1WavetableIndex", apvts, osc1WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
-    osc1Level = std::make_unique<KnobGroup>(); osc1Level->setup("osc1Level", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "LEVEL", "", this, lookAndFeel.get());
-    osc1Pitch = std::make_unique<KnobGroup>(); osc1Pitch->setup("osc1Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
-    osc1Fine = std::make_unique<KnobGroup>(); osc1Fine->setup("osc1FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
-    osc1Pan = std::make_unique<KnobGroup>(); osc1Pan->setup("osc1Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this, lookAndFeel.get());
-    osc1Unison = std::make_unique<KnobGroup>(); osc1Unison->setup("osc1Unison", apvts, 1.0f, 8.0f, 1.0f, 1.0f, "UNISON", "", this, lookAndFeel.get());
-    osc1Detune = std::make_unique<KnobGroup>(); osc1Detune->setup("osc1Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this, lookAndFeel.get());
-    osc1PW = std::make_unique<KnobGroup>(); osc1PW->setup("osc1PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this, lookAndFeel.get());
-    osc1Scan = std::make_unique<KnobGroup>(); osc1Scan->setup("osc1Scan", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SCAN", "", this, lookAndFeel.get());
+    // Sub + Noise
+    setCombo (subWave,   "subWave",  apvts, subWaveA,  {"Sine","Square"}, 0, this, laf.get());
+    subLev.setup ("subLevel",         apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "SUB",    "",     this, laf.get());
+    subPit.setup ("subPitch",         apvts, -24.0f,0.0f,1.0f,-12.0f,   "S PIT",  " st",  this, laf.get());
+    setCombo (noiseType, "noiseType", apvts, noiseTypeA, {"White","Pink"}, 0, this, laf.get());
+    noiseLev.setup ("noiseLevel",     apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "NOISE",  "",     this, laf.get());
 
-    setupCombo(osc2Wave, "osc2Wave", apvts, osc2WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
-    setupCombo(osc2Wavetable, "osc2WavetableIndex", apvts, osc2WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
-    osc2Level = std::make_unique<KnobGroup>(); osc2Level->setup("osc2Level", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "LEVEL", "", this, lookAndFeel.get());
-    osc2Pitch = std::make_unique<KnobGroup>(); osc2Pitch->setup("osc2Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
-    osc2Fine = std::make_unique<KnobGroup>(); osc2Fine->setup("osc2FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
-    osc2Pan = std::make_unique<KnobGroup>(); osc2Pan->setup("osc2Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this, lookAndFeel.get());
-    osc2Unison = std::make_unique<KnobGroup>(); osc2Unison->setup("osc2Unison", apvts, 1.0f, 8.0f, 1.0f, 1.0f, "UNISON", "", this, lookAndFeel.get());
-    osc2Detune = std::make_unique<KnobGroup>(); osc2Detune->setup("osc2Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this, lookAndFeel.get());
-    osc2PW = std::make_unique<KnobGroup>(); osc2PW->setup("osc2PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this, lookAndFeel.get());
-    osc2Scan = std::make_unique<KnobGroup>(); osc2Scan->setup("osc2Scan", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SCAN", "", this, lookAndFeel.get());
+    // Filter
+    setCombo (filtType, "filterType", apvts, filtTypeA, {"LP 4-Pole","LP 2-Pole","HP 4-Pole","HP 2-Pole","Bandpass","Notch"}, 0, this, laf.get());
+    filtCut.setup ("filterCutoff",     apvts, 20.0f,20000.0f,1.0f,1000.0f,"CUTOFF", " Hz",  this, laf.get());
+    filtRes.setup ("filterResonance",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,  "RESO",   "",     this, laf.get());
+    filtDrv.setup ("filterDrive",      apvts, 0.0f, 1.0f, 0.01f, 0.0f,  "DRIVE",  "",     this, laf.get());
+    filtKey.setup ("filterKeyTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f, "KEY",    "",     this, laf.get());
+    filtVel.setup ("filterVelTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f, "VEL",    "",     this, laf.get());
 
-    setupCombo(osc3Wave, "osc3Wave", apvts, osc3WaveAtt, {"Sine", "Triangle", "Saw", "Square", "Noise", "Wavetable"}, 2, this, lookAndFeel.get());
-    setupCombo(osc3Wavetable, "osc3WavetableIndex", apvts, osc3WavetableAtt, {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0, this, lookAndFeel.get());
-    osc3Level = std::make_unique<KnobGroup>(); osc3Level->setup("osc3Level", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "LEVEL", "", this, lookAndFeel.get());
-    osc3Pitch = std::make_unique<KnobGroup>(); osc3Pitch->setup("osc3Pitch", apvts, -24.0f, 24.0f, 1.0f, 0.0f, "PITCH", " st", this, lookAndFeel.get());
-    osc3Fine = std::make_unique<KnobGroup>(); osc3Fine->setup("osc3FineTune", apvts, -50.0f, 50.0f, 1.0f, 0.0f, "FINE", " ct", this, lookAndFeel.get());
-    osc3Pan = std::make_unique<KnobGroup>(); osc3Pan->setup("osc3Pan", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "PAN", "", this, lookAndFeel.get());
-    osc3Unison = std::make_unique<KnobGroup>(); osc3Unison->setup("osc3Unison", apvts, 1.0f, 8.0f, 1.0f, 1.0f, "UNISON", "", this, lookAndFeel.get());
-    osc3Detune = std::make_unique<KnobGroup>(); osc3Detune->setup("osc3Detune", apvts, 0.0f, 50.0f, 1.0f, 0.0f, "DETUNE", " ct", this, lookAndFeel.get());
-    osc3PW = std::make_unique<KnobGroup>(); osc3PW->setup("osc3PulseWidth", apvts, 0.01f, 0.99f, 0.01f, 0.5f, "PW", "%", this, lookAndFeel.get());
-    osc3Scan = std::make_unique<KnobGroup>(); osc3Scan->setup("osc3Scan", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SCAN", "", this, lookAndFeel.get());
+    // Amp Env
+    ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get());
+    ampD.setup  ("ampDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "DEC"," s", this, laf.get());
+    ampS.setup  ("ampSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.7f,       "SUS","",   this, laf.get());
+    ampR.setup  ("ampRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "REL"," s", this, laf.get());
+    ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get());
 
-    setupCombo(subWave, "subWave", apvts, subWaveAtt, {"Sine", "Square"}, 0, this, lookAndFeel.get());
-    subLevel = std::make_unique<KnobGroup>(); subLevel->setup("subLevel", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SUB LEVEL", "", this, lookAndFeel.get());
-    subPitch = std::make_unique<KnobGroup>(); subPitch->setup("subPitch", apvts, -24.0f, 0.0f, 1.0f, -12.0f, "SUB PITCH", " st", this, lookAndFeel.get());
+    // Filt Env
+    fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get());
+    fenvD.setup  ("filtDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC"," s", this, laf.get());
+    fenvS.setup  ("filtSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "SUS","",   this, laf.get());
+    fenvR.setup  ("filtRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL"," s", this, laf.get());
+    fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get());
+    fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get());
 
-    setupCombo(noiseWave, "noiseType", apvts, noiseWaveAtt, {"White", "Pink"}, 0, this, lookAndFeel.get());
-    noiseLevel = std::make_unique<KnobGroup>(); noiseLevel->setup("noiseLevel", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "NOISE LEVEL", "", this, lookAndFeel.get());
+    // LFO 1
+    setCombo (lfo1Wave, "lfo1Wave", apvts, lfo1WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 0, this, laf.get());
+    lfo1Rate.setup ("lfo1Rate",   apvts, 0.01f, 20.0f, 0.01f, 1.0f,  "RATE"," Hz",this, laf.get());
+    lfo1Amt.setup  ("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get());
+    lfo1Del.setup  ("lfo1Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get());
+    lfo1Fade.setup ("lfo1Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get());
 
-    // === FILTER ===
-    setupCombo(filterType, "filterType", apvts, filterTypeAtt, {"LP 4-Pole", "LP 2-Pole", "HP 4-Pole", "HP 2-Pole", "Bandpass", "Notch"}, 0, this, lookAndFeel.get());
-    filterCutoff = std::make_unique<KnobGroup>(); filterCutoff->setup("filterCutoff", apvts, 20.0f, 20000.0f, 1.0f, 1000.0f, "CUTOFF", " Hz", this, lookAndFeel.get());
-    filterReso = std::make_unique<KnobGroup>(); filterReso->setup("filterResonance", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "RESO", "", this, lookAndFeel.get());
-    filterDrive = std::make_unique<KnobGroup>(); filterDrive->setup("filterDrive", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "DRIVE", "", this, lookAndFeel.get());
-    filterKeyTrk = std::make_unique<KnobGroup>(); filterKeyTrk->setup("filterKeyTrack", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "KEY TRK", "", this, lookAndFeel.get());
-    filterVelTrk = std::make_unique<KnobGroup>(); filterVelTrk->setup("filterVelTrack", apvts, -1.0f, 1.0f, 0.01f, 0.0f, "VEL TRK", "", this, lookAndFeel.get());
+    // LFO 2
+    setCombo (lfo2Wave, "lfo2Wave", apvts, lfo2WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 1, this, laf.get());
+    lfo2Rate.setup ("lfo2Rate",   apvts, 0.01f, 20.0f, 0.01f, 5.0f,  "RATE"," Hz",this, laf.get());
+    lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get());
+    lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get());
+    lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get());
 
-    // === AMP ENV ===
-    ampAtt = std::make_unique<KnobGroup>(); ampAtt->setup("ampAttack", apvts, 0.001f, 10.0f, 0.001f, 0.01f, "ATT", " s", this, lookAndFeel.get());
-    ampDec = std::make_unique<KnobGroup>(); ampDec->setup("ampDecay", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC", " s", this, lookAndFeel.get());
-    ampSus = std::make_unique<KnobGroup>(); ampSus->setup("ampSustain", apvts, 0.0f, 1.0f, 0.01f, 0.7f, "SUS", "", this, lookAndFeel.get());
-    ampRel = std::make_unique<KnobGroup>(); ampRel->setup("ampRelease", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL", " s", this, lookAndFeel.get());
-    ampVel = std::make_unique<KnobGroup>(); ampVel->setup("ampVelSens", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "VEL", "", this, lookAndFeel.get());
-
-    // === FILT ENV ===
-    filtAtt = std::make_unique<KnobGroup>(); filtAtt->setup("filtAttack", apvts, 0.001f, 10.0f, 0.001f, 0.01f, "ATT", " s", this, lookAndFeel.get());
-    filtDec = std::make_unique<KnobGroup>(); filtDec->setup("filtDecay", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC", " s", this, lookAndFeel.get());
-    filtSus = std::make_unique<KnobGroup>(); filtSus->setup("filtSustain", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SUS", "", this, lookAndFeel.get());
-    filtRel = std::make_unique<KnobGroup>(); filtRel->setup("filtRelease", apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL", " s", this, lookAndFeel.get());
-    filtAmt = std::make_unique<KnobGroup>(); filtAmt->setup("filtAmount", apvts, -1.0f, 1.0f, 0.01f, 0.5f, "AMT", "", this, lookAndFeel.get());
-    filtVel = std::make_unique<KnobGroup>(); filtVel->setup("filtVelSens", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "VEL", "", this, lookAndFeel.get());
-
-    // === LFOS ===
-    setupCombo(lfo1Wave, "lfo1Wave", apvts, lfo1WaveAtt, {"Sine", "Triangle", "Saw", "Square", "S&H"}, 0, this, lookAndFeel.get());
-    lfo1Rate = std::make_unique<KnobGroup>(); lfo1Rate->setup("lfo1Rate", apvts, 0.01f, 20.0f, 0.01f, 1.0f, "RATE", " Hz", this, lookAndFeel.get());
-    lfo1Amt = std::make_unique<KnobGroup>(); lfo1Amt->setup("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "AMT", "", this, lookAndFeel.get());
-    lfo1Delay = std::make_unique<KnobGroup>(); lfo1Delay->setup("lfo1Delay", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "DELAY", " s", this, lookAndFeel.get());
-    lfo1Fade = std::make_unique<KnobGroup>(); lfo1Fade->setup("lfo1Fade", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "FADE", " s", this, lookAndFeel.get());
-
-    setupCombo(lfo2Wave, "lfo2Wave", apvts, lfo2WaveAtt, {"Sine", "Triangle", "Saw", "Square", "S&H"}, 1, this, lookAndFeel.get());
-    lfo2Rate = std::make_unique<KnobGroup>(); lfo2Rate->setup("lfo2Rate", apvts, 0.01f, 20.0f, 0.01f, 5.0f, "RATE", " Hz", this, lookAndFeel.get());
-    lfo2Amt = std::make_unique<KnobGroup>(); lfo2Amt->setup("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "AMT", "", this, lookAndFeel.get());
-    lfo2Delay = std::make_unique<KnobGroup>(); lfo2Delay->setup("lfo2Delay", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "DELAY", " s", this, lookAndFeel.get());
-    lfo2Fade = std::make_unique<KnobGroup>(); lfo2Fade->setup("lfo2Fade", apvts, 0.0f, 5.0f, 0.01f, 0.0f, "FADE", " s", this, lookAndFeel.get());
-
-    // Mod label
-    addAndMakeVisible(modLabel);
-    modLabel.setText("MOD MATRIX — 8 slots (right-click knobs → Map to MIDI / Mod Matrix)", juce::dontSendNotification);
-    modLabel.setJustificationType(juce::Justification::centred);
-    modLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF666677));
-    modLabel.setFont(juce::FontOptions(11.0f));
+    // Mod matrix label
+    addAndMakeVisible (modLabel);
+    modLabel.setText ("8-slot Mod Matrix  —  right-click knobs to assign", juce::dontSendNotification);
+    modLabel.setJustificationType (juce::Justification::centred);
+    modLabel.setColour (juce::Label::textColourId, juce::Colour (0xFF555566));
+    modLabel.setFont (juce::FontOptions (10.0f));
 }
 
-void AnalogSynthAudioProcessorEditor::paint(juce::Graphics& g)
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xFF15151E));
+    g.fillAll (juce::Colour (0xFF0D0D14));
 
-    auto header = getLocalBounds().removeFromTop(56);
-    g.setColour(juce::Colour(0xFF1A1A25));
-    g.fillRect(header);
-    g.setColour(juce::Colour(0xFF2A2A3A));
-    g.drawLine(0, header.getBottom(), getWidth(), header.getBottom(), 1.0f);
+    // top bar
+    auto hdr = getLocalBounds().removeFromTop (48);
+    g.setColour (juce::Colour (0xFF12121C));
+    g.fillRect (hdr);
+    g.setColour (juce::Colour (0xFF1E1E2E));
+    g.drawLine (0, hdr.getBottom(), getWidth(), hdr.getBottom(), 1.0f);
 
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::FontOptions(20.0f, juce::Font::bold));
-    g.drawText("AnalogSynth", header.removeFromLeft(180).reduced(16, 0), juce::Justification::centredLeft);
+    g.setColour (juce::Colour (0xFF00E5B0).withAlpha (0.9f));
+    g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
+    g.drawText ("ANALOG SYNTH", hdr.removeFromLeft (180).reduced (14, 0),
+                juce::Justification::centredLeft);
+}
 
-    g.setFont(juce::FontOptions(11.0f));
-    g.setColour(juce::Colour(0xFF666677));
-    auto statusArea = header.removeFromRight(300);
-    g.drawText(processorRef.isTestToneActive() ? "● TEST ACTIVE" : "○ TEST READY",
-               statusArea.reduced(16, 0), juce::Justification::centredRight);
+//==============================================================================
+static juce::Rectangle<int> knobRect (juce::Rectangle<int> area, int ks, int lh)
+{
+    auto k = area.removeFromTop (ks).reduced (2);
+    auto l = area.removeFromTop (lh).reduced (2);
+    return k.withBottom (l.getBottom());
 }
 
 void AnalogSynthAudioProcessorEditor::resized()
 {
-    // Deferred UI construction — safe to build now on the message thread
-    if (!initialized)
+    if (!built) { buildUI(); built = true; }
+
+    auto b    = getLocalBounds().reduced (10);
+    auto hdr  = b.removeFromTop (48);
+
+    // global knobs (top-right)
+    auto gb = hdr.removeFromRight (200).reduced (4);
+    int  gw = gb.getWidth() / 3;
+    masterGain.slider.setBounds (gb.removeFromLeft (gw).reduced (2));
+    polyphony.slider.setBounds   (gb.removeFromLeft (gw).reduced (2));
+    pitchBend.slider.setBounds   (gb.reduced (2));
+
+    b.removeFromTop (4);
+
+    // === LEFT ===
+    auto L = b.removeFromLeft (b.getWidth() * 3 / 5);
+    auto R = b;
+
+    // ----- OSCILLATORS -----
+    auto oscB = L.removeFromTop (380);
+    oscPanel.setBounds (oscB);
+    auto oi = oscB.reduced (8, 30);
+    int  ocw = (oi.getWidth() - 2 * 4) / 3;
+
+    auto layOsc = [&](juce::ComboBox& wv, juce::ComboBox& wt, WaveformPreview& wf,
+                      KnobGroup& lv, KnobGroup& pt, KnobGroup& fn, KnobGroup& pn,
+                      KnobGroup& un, KnobGroup& dt, KnobGroup& pw, KnobGroup& sc,
+                      juce::Rectangle<int> c)
     {
-        buildUI();
-        initialized = true;
-    }
+        wv.setBounds (c.removeFromTop (kComboH).reduced (1));
+        wt.setBounds (c.removeFromTop (kComboH).reduced (1));
+        wf.setBounds (c.removeFromTop (28).reduced (2));
 
-    auto bounds = getLocalBounds().reduced(12);
-    const int knobSize = 58;
-    const int labelH = 16;
-    const int comboH = 28;
-    const int sectionGap = 8;
+        // Knobs: 2 rows of 4
+        auto r1 = c.removeFromTop (56);
+        lv.slider.setBounds (r1.removeFromLeft (ocw).reduced (1));
+        pt.slider.setBounds (r1.removeFromLeft (ocw).reduced (1));
+        fn.slider.setBounds (r1.removeFromLeft (ocw).reduced (1));
+        pn.slider.setBounds (r1.reduced (1));
 
-    // Header
-    auto headerBar = bounds.removeFromTop(56);
-    waveTypeComboBox.setBounds(headerBar.removeFromLeft(120).reduced(4).withHeight(comboH).withY(12));
-
-    auto globalArea = headerBar.removeFromRight(220).reduced(4);
-    masterGainKnob->slider.setBounds(globalArea.removeFromLeft(70).reduced(2));
-    masterGainKnob->label.setBounds(globalArea.removeFromLeft(70).reduced(2).withHeight(labelH).withY(masterGainKnob->slider.getBottom()));
-    polyphonyKnob->slider.setBounds(globalArea.removeFromLeft(70).reduced(2));
-    polyphonyKnob->label.setBounds(globalArea.removeFromLeft(70).reduced(2).withHeight(labelH).withY(polyphonyKnob->slider.getBottom()));
-    pitchBendKnob->slider.setBounds(globalArea.removeFromLeft(70).reduced(2));
-    pitchBendKnob->label.setBounds(globalArea.removeFromLeft(70).reduced(2).withHeight(labelH).withY(pitchBendKnob->slider.getBottom()));
-
-    bounds.removeFromTop(sectionGap);
-
-    // 2-column layout
-    auto leftCol = bounds.removeFromLeft((bounds.getWidth() * 3) / 5);
-    auto rightCol = bounds;
-
-    // === LEFT: OSC + FILTER ===
-    auto oscArea = leftCol.removeFromTop(388);
-    oscPanel->setBounds(oscArea);
-    auto oscInner = oscArea.reduced(14, 34);
-
-    int oscColW = (oscInner.getWidth() - 4 * 6) / 5;
-    auto layoutOsc = [&](juce::ComboBox& wave, juce::ComboBox& wavetable, WaveformPreview* wf,
-                         KnobGroup* level, KnobGroup* pitch, KnobGroup* fine,
-                         KnobGroup* pan, KnobGroup* unison, KnobGroup* detune, KnobGroup* pw,
-                         KnobGroup* scan,
-                         juce::Rectangle<int> col)
-    {
-        wave.setBounds(col.removeFromTop(comboH).reduced(2));
-        wavetable.setBounds(col.removeFromTop(comboH).reduced(2));
-        auto wfArea = col.removeFromTop(32);
-        wf->setBounds(wfArea.reduced(4));
-        auto knobs = col.reduced(0, 2);
-        level->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
-        pitch->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
-        fine->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
-        pan->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
-        unison->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
-        detune->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
-        pw->setBounds(knobs.removeFromLeft(oscColW).reduced(2), knobSize, labelH);
-        scan->setBounds(knobs.reduced(2), knobSize, labelH);
+        auto r2 = c.removeFromTop (56);
+        un.slider.setBounds (r2.removeFromLeft (ocw).reduced (1));
+        dt.slider.setBounds (r2.removeFromLeft (ocw).reduced (1));
+        pw.slider.setBounds (r2.removeFromLeft (ocw).reduced (1));
+        sc.slider.setBounds (r2.reduced (1));
     };
 
-    auto osc1Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc1Wave, osc1Wavetable, wf1.get(), osc1Level.get(), osc1Pitch.get(), osc1Fine.get(), osc1Pan.get(), osc1Unison.get(), osc1Detune.get(), osc1PW.get(), osc1Scan.get(), osc1Area);
+    auto o1 = oi.removeFromLeft (ocw); oi.removeFromLeft (4);
+    auto o2 = oi.removeFromLeft (ocw); oi.removeFromLeft (4);
+    auto o3 = oi;
+    layOsc (osc1Wave, osc1WT, wf1, osc1Lev,osc1Pit,osc1Fin,osc1Pan,osc1Uni,osc1Det,osc1PW,osc1Scn, o1);
+    layOsc (osc2Wave, osc2WT, wf2, osc2Lev,osc2Pit,osc2Fin,osc2Pan,osc2Uni,osc2Det,osc2PW,osc2Scn, o2);
+    layOsc (osc3Wave, osc3WT, wf3, osc3Lev,osc3Pit,osc3Fin,osc3Pan,osc3Uni,osc3Det,osc3PW,osc3Scn, o3);
 
-    auto osc2Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc2Wave, osc2Wavetable, wf2.get(), osc2Level.get(), osc2Pitch.get(), osc2Fine.get(), osc2Pan.get(), osc2Unison.get(), osc2Detune.get(), osc2PW.get(), osc2Scan.get(), osc2Area);
+    // Sub + Noise (below osc)
+    auto sn = oscB.reduced (6, 0).removeFromBottom (48);
+    auto subRow  = sn.removeFromTop (22);
+    subWave.setBounds  (subRow.removeFromLeft (80).reduced (2));
+    subLev.slider.setBounds  (subRow.removeFromLeft (40).reduced (2));
+    subPit.slider.setBounds  (subRow.removeFromLeft (40).reduced (2));
+    sn.removeFromTop (2);
+    noiseType.setBounds (sn.removeFromLeft (70).reduced (2));
+    noiseLev.slider.setBounds (sn.removeFromLeft (40).reduced (2));
 
-    auto osc3Area = oscInner.removeFromLeft(oscColW); oscInner.removeFromLeft(6);
-    layoutOsc(osc3Wave, osc3Wavetable, wf3.get(), osc3Level.get(), osc3Pitch.get(), osc3Fine.get(), osc3Pan.get(), osc3Unison.get(), osc3Detune.get(), osc3PW.get(), osc3Scan.get(), osc3Area);
+    L.removeFromTop (4);
 
-    // Sub + Noise
-    auto subNoiseArea = oscInner; subNoiseArea.removeFromLeft(6);
-    subWave.setBounds(subNoiseArea.removeFromTop(comboH).reduced(2));
-    auto subKnobs = subNoiseArea.reduced(0, 4);
-    subLevel->setBounds(subKnobs.removeFromLeft(subKnobs.getWidth()/2).reduced(2), knobSize, labelH);
-    subPitch->setBounds(subKnobs.reduced(2), knobSize, labelH);
+    // ----- FILTER -----
+    auto filtB = L.removeFromTop (150);
+    filtPanel.setBounds (filtB);
+    auto fi = filtB.reduced (8, 30);
+    filtType.setBounds (fi.removeFromTop (kComboH).reduced (2));
+    auto fkr = fi;
+    int  fkw = fi.getWidth() / 5;
+    auto placeK = [&](KnobGroup& k) {
+        k.slider.setBounds (fkr.removeFromLeft (fkw).reduced (2));
+        k.label.setBounds (k.slider.getBounds().withY (k.slider.getBottom()).withHeight (kLabelH));
+    };
+    placeK (filtCut); placeK (filtRes); placeK (filtDrv); placeK (filtKey); placeK (filtVel);
 
-    subNoiseArea.removeFromTop(2);
-    noiseWave.setBounds(subNoiseArea.removeFromTop(comboH).reduced(2));
-    noiseLevel->setBounds(subNoiseArea.reduced(2, knobSize).reduced(2), knobSize, labelH);
+    // === RIGHT ===
+    // ----- AMP ENV -----
+    auto ampB = R.removeFromTop (160);
+    ampPanel.setBounds (ampB);
+    auto ai = ampB.reduced (8, 30);
+    int  akw = ai.getWidth() / 5;
+    auto arow = ai.removeFromTop (56);
+    ampA.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
+    ampD.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
+    ampS.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
+    ampR.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
+    ampVel.slider.setBounds (arow.reduced (2));
+    // labels
+    int ly = ampA.slider.getBottom();
+    auto lrow = ai.removeFromTop (kLabelH);
+    ampA.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
+    ampD.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
+    ampS.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
+    ampR.label.setBounds (lrow.removeFromLeft (akw).reduced (2).withY (ly));
+    ampVel.label.setBounds (lrow.reduced (2).withY (ly));
 
-    // Filter
-    auto filtArea = leftCol.removeFromTop(170);
-    filterPanel->setBounds(filtArea);
-    auto filtInner = filtArea.reduced(14, 34);
+    R.removeFromTop (4);
 
-    int fkw = (filtInner.getWidth() - 4 * 6) / 5;
-    filterType.setBounds(filtInner.removeFromLeft(fkw + 20).removeFromTop(comboH).reduced(2));
-    auto fknobs = filtInner;
-    filterCutoff->setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
-    filterReso->setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
-    filterDrive->setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
-    filterKeyTrk->setBounds(fknobs.removeFromLeft(fkw).reduced(2), knobSize, labelH);
-    filterVelTrk->setBounds(fknobs.reduced(2), knobSize, labelH);
+    // ----- FILT ENV -----
+    auto fenvB = R.removeFromTop (160);
+    fenvPanel.setBounds (fenvB);
+    auto fei = fenvB.reduced (8, 30);
+    int  few = fei.getWidth() / 5;
+    auto ferow = fei.removeFromTop (56);
+    fenvA.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
+    fenvD.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
+    fenvS.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
+    fenvR.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
+    fenvAmt.slider.setBounds (ferow.removeFromLeft (few).reduced (2));
+    // labels + row 2
+    int fly = fenvA.slider.getBottom();
+    auto flrow = fei.removeFromTop (kLabelH);
+    fenvA.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
+    fenvD.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
+    fenvS.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
+    fenvR.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
+    fenvAmt.label.setBounds (flrow.removeFromLeft (few).reduced (2).withY (fly));
 
-    // === RIGHT: ENVELOPES + LFOS ===
-    // Amp Env
-    auto ampArea = rightCol.removeFromTop(150);
-    ampEnvPanel->setBounds(ampArea);
-    auto aInner = ampArea.reduced(14, 34);
-    int akw = (aInner.getWidth() - 4 * 6) / 5;
-    ampAtt->setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
-    ampDec->setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
-    ampSus->setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
-    ampRel->setBounds(aInner.removeFromLeft(akw).reduced(2), knobSize, labelH);
-    ampVel->setBounds(aInner.reduced(2), knobSize, labelH);
+    R.removeFromTop (4);
 
-    // Filt Env
-    auto feArea = rightCol.removeFromTop(150);
-    filtEnvPanel->setBounds(feArea);
-    auto feInner = feArea.reduced(14, 34);
-    int fekw = (feInner.getWidth() - 5 * 6) / 6;
-    filtAtt->setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
-    filtDec->setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
-    filtSus->setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
-    filtRel->setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
-    filtAmt->setBounds(feInner.removeFromLeft(fekw).reduced(2), knobSize, labelH);
-    filtVel->setBounds(feInner.reduced(2), knobSize, labelH);
+    // ----- LFOs -----
+    auto lfoB = R.removeFromTop (130);
+    lfoPanel.setBounds (lfoB);
+    auto li = lfoB.reduced (8, 30);
+    auto lHalfW = li.getWidth() / 2 - 2;
 
-    // LFOs
-    auto lfoArea = rightCol.removeFromTop(180);
-    lfoPanel->setBounds(lfoArea);
-    auto lfoInner = lfoArea.reduced(14, 34);
-    int lfoColW = lfoInner.getWidth() / 2;
+    auto layLFO = [&](juce::ComboBox& wv, KnobGroup& rt, KnobGroup& am, KnobGroup& dl, KnobGroup& fd,
+                      juce::Rectangle<int> c)
+    {
+        wv.setBounds (c.removeFromTop (kComboH).reduced (2));
+        auto kr = c.removeFromTop (56);
+        int  kw = kr.getWidth() / 4;
+        rt.slider.setBounds (kr.removeFromLeft (kw).reduced (1));
+        am.slider.setBounds (kr.removeFromLeft (kw).reduced (1));
+        dl.slider.setBounds (kr.removeFromLeft (kw).reduced (1));
+        fd.slider.setBounds (kr.reduced (1));
+    };
 
-    auto lfo1Area = lfoInner.removeFromLeft(lfoColW); lfoInner.removeFromLeft(6);
-    lfo1Wave.setBounds(lfo1Area.removeFromTop(comboH).reduced(2));
-    auto l1k = lfo1Area.reduced(0, 4);
-    lfo1Rate->setBounds(l1k.removeFromLeft(70).reduced(2), knobSize, labelH);
-    lfo1Amt->setBounds(l1k.removeFromLeft(70).reduced(2), knobSize, labelH);
-    lfo1Delay->setBounds(l1k.removeFromLeft(70).reduced(2), knobSize, labelH);
-    lfo1Fade->setBounds(l1k.reduced(2), knobSize, labelH);
+    layLFO (lfo1Wave, lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade, li.removeFromLeft (lHalfW));
+    li.removeFromLeft (4);
+    layLFO (lfo2Wave, lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade, li);
 
-    auto lfo2Area = lfoInner;
-    lfo2Wave.setBounds(lfo2Area.removeFromTop(comboH).reduced(2));
-    auto l2k = lfo2Area.reduced(0, 4);
-    lfo2Rate->setBounds(l2k.removeFromLeft(70).reduced(2), knobSize, labelH);
-    lfo2Amt->setBounds(l2k.removeFromLeft(70).reduced(2), knobSize, labelH);
-    lfo2Delay->setBounds(l2k.removeFromLeft(70).reduced(2), knobSize, labelH);
-    lfo2Fade->setBounds(l2k.reduced(2), knobSize, labelH);
-
-    // Mod Matrix
-    auto modArea = rightCol.removeFromTop(60);
-    modPanel->setBounds(modArea);
-    modLabel.setBounds(modArea.reduced(14, 0));
+    // ----- MOD MATRIX -----
+    R.removeFromTop (4);
+    modPanel.setBounds (R);
+    modLabel.setBounds (R.reduced (8, 26).removeFromBottom (20));
 }

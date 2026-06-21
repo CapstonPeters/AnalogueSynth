@@ -5,10 +5,23 @@
 
 class AnalogSynthAudioProcessor;
 
-// Forward declarations to reduce template instantiation in header
+/*
+ * Design principles (Codex/Serum-inspired):
+ *   - Dark uniform background (#0D0D14)
+ *   - Rounded panel cards with subtle gradient fills
+ *   - Accent-colored section headers (cyan=OSC, orange=Filter, amber=Env, green=LFO, violet=Mod)
+ *   - 42px knobs with white dot indicators, arc fill from 7-o'clock to 5-o'clock
+ *   - Compact combo boxes with drop-shadow arrows
+ *   - 8px grid for spacing — everything aligns to it
+ */
+
+//==============================================================================
+// Forward declarations
 struct KnobGroup;
 class SectionPanel;
+class WaveformPreview;
 
+//==============================================================================
 class AnalogSynthAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
 public:
@@ -19,90 +32,116 @@ public:
     void resized() override;
 
 private:
-    class SynthLookAndFeel;
-    std::unique_ptr<SynthLookAndFeel> lookAndFeel;
+    // -----------------------------------------------------------------
+    // Embedded classes (complete types needed for std::unique_ptr)
+    // -----------------------------------------------------------------
 
-    // Complete type definitions for unique_ptr
+    class SynthLookAndFeel;
+    std::unique_ptr<SynthLookAndFeel> laf;
+
     struct KnobGroup
     {
         juce::Slider slider;
-        juce::Label label;
-        std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
+        juce::Label  label;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> att;
 
-        void setup(const juce::String& paramID, juce::AudioProcessorValueTreeState& apvts,
-                   float min, float max, float interval, float def,
-                   const juce::String& labelText, const juce::String& suffix,
-                   juce::Component* parent, juce::LookAndFeel* laf);
-
-        void setBounds(juce::Rectangle<int> area, int knobSize, int labelHeight);
+        void setup (const juce::String& paramID, juce::AudioProcessorValueTreeState&,
+                    float min, float max, float step, float def,
+                    const juce::String& txt, const juce::String& suffix,
+                    juce::Component* parent, juce::LookAndFeel* lf);
     };
 
     class SectionPanel : public juce::Component
     {
     public:
-        SectionPanel(const juce::String& title, juce::Colour accentColour);
-        void paint(juce::Graphics& g) override;
-
+        SectionPanel (const juce::String& title, juce::Colour accent);
+        void paint (juce::Graphics&) override;
     private:
-        juce::String titleText;
-        juce::Colour accent;
+        juce::String title;
+        juce::Colour  accent;
     };
 
     class WaveformPreview : public juce::Component
     {
     public:
-        WaveformPreview() = default;
-        void paint(juce::Graphics& g) override;
-        void setWaveType(const juce::String& type) { waveType = type; repaint(); }
+        void paint (juce::Graphics&) override;
+        void setType (const juce::String& t) { waveType = t; repaint(); }
     private:
         juce::String waveType = "Saw";
     };
 
-    AnalogSynthAudioProcessor& processorRef;
+    // -----------------------------------------------------------------
+    // State
+    // -----------------------------------------------------------------
+    AnalogSynthAudioProcessor& proc;
     juce::AudioProcessorValueTreeState& apvts;
 
-    // Deferred UI initialization — built on first resized() to avoid
-    // Windows static initialization / thread-initialization crashes
-    bool initialized = false;
+    bool built = false;
     void buildUI();
 
-    // Header controls
-    juce::ComboBox waveTypeComboBox;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> waveTypeAttachment;
+    // -----------------------------------------------------------------
+    // Global (top bar)
+    // -----------------------------------------------------------------
+    KnobGroup masterGain, polyphony, pitchBend;
 
-    // Waveform previews (oscilloscope-style)
-    std::unique_ptr<WaveformPreview> wf1, wf2, wf3;
+    // -----------------------------------------------------------------
+    // Oscillators × 3
+    // -----------------------------------------------------------------
+    KnobGroup osc1Lev, osc1Pit, osc1Fin, osc1Pan, osc1Uni, osc1Det, osc1PW, osc1Scn;
+    KnobGroup osc2Lev, osc2Pit, osc2Fin, osc2Pan, osc2Uni, osc2Det, osc2PW, osc2Scn;
+    KnobGroup osc3Lev, osc3Pit, osc3Fin, osc3Pan, osc3Uni, osc3Det, osc3PW, osc3Scn;
+    KnobGroup subLev, subPit, noiseLev;
 
-    // Knob groups
-    std::unique_ptr<KnobGroup> masterGainKnob, polyphonyKnob, pitchBendKnob;
-
-    std::unique_ptr<KnobGroup> osc1Level, osc1Pitch, osc1Fine, osc1Pan, osc1Unison, osc1Detune, osc1PW, osc1Scan;
-    std::unique_ptr<KnobGroup> osc2Level, osc2Pitch, osc2Fine, osc2Pan, osc2Unison, osc2Detune, osc2PW, osc2Scan;
-    std::unique_ptr<KnobGroup> osc3Level, osc3Pitch, osc3Fine, osc3Pan, osc3Unison, osc3Detune, osc3PW, osc3Scan;
-    std::unique_ptr<KnobGroup> subLevel, subPitch, noiseLevel;
-
-    std::unique_ptr<KnobGroup> filterCutoff, filterReso, filterDrive, filterKeyTrk, filterVelTrk;
-
-    std::unique_ptr<KnobGroup> ampAtt, ampDec, ampSus, ampRel, ampVel;
-    std::unique_ptr<KnobGroup> filtAtt, filtDec, filtSus, filtRel, filtAmt, filtVel;
-
-    std::unique_ptr<KnobGroup> lfo1Rate, lfo1Amt, lfo1Delay, lfo1Fade;
-    std::unique_ptr<KnobGroup> lfo2Rate, lfo2Amt, lfo2Delay, lfo2Fade;
-
-    // Wave combos
-    juce::ComboBox osc1Wave, osc2Wave, osc3Wave, subWave, noiseWave, filterType, lfo1Wave, lfo2Wave;
-    juce::ComboBox osc1Wavetable, osc2Wavetable, osc3Wavetable;
-
+    juce::ComboBox osc1Wave, osc2Wave, osc3Wave, subWave, noiseType;
+    juce::ComboBox osc1WT, osc2WT, osc3WT;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
-        osc1WaveAtt, osc2WaveAtt, osc3WaveAtt, subWaveAtt, noiseWaveAtt,
-        filterTypeAtt, lfo1WaveAtt, lfo2WaveAtt,
-        osc1WavetableAtt, osc2WavetableAtt, osc3WavetableAtt;
+        osc1WaveA, osc2WaveA, osc3WaveA, subWaveA, noiseTypeA,
+        osc1WTA, osc2WTA, osc3WTA;
 
-    // Section panels
-    std::unique_ptr<SectionPanel> oscPanel, filterPanel, ampEnvPanel;
-    std::unique_ptr<SectionPanel> filtEnvPanel, lfoPanel, modPanel;
+    WaveformPreview wf1, wf2, wf3;
 
+    SectionPanel oscPanel {"OSCILLATORS",      juce::Colour(0xFF00E5B0)};
+
+    // -----------------------------------------------------------------
+    // Filter
+    // -----------------------------------------------------------------
+    KnobGroup filtCut, filtRes, filtDrv, filtKey, filtVel;
+    juce::ComboBox    filtType;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> filtTypeA;
+    SectionPanel filtPanel {"FILTER", juce::Colour(0xFFFF7744)};
+
+    // -----------------------------------------------------------------
+    // Envelopes (Amp + Filter)
+    // -----------------------------------------------------------------
+    KnobGroup ampA, ampD, ampS, ampR, ampVel;
+    KnobGroup fenvA, fenvD, fenvS, fenvR, fenvAmt, fenvVel;
+    SectionPanel ampPanel  {"AMP ENVELOPE",    juce::Colour(0xFF88BBFF)};
+    SectionPanel fenvPanel {"FILTER ENVELOPE", juce::Colour(0xFFBB88FF)};
+
+    // -----------------------------------------------------------------
+    // LFOs (× 2)
+    // -----------------------------------------------------------------
+    KnobGroup lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade;
+    KnobGroup lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade;
+    juce::ComboBox lfo1Wave, lfo2Wave;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> lfo1WaveA, lfo2WaveA;
+    SectionPanel lfoPanel {"LFOs", juce::Colour(0xFFFFAA55)};
+
+    // -----------------------------------------------------------------
+    // Mod Matrix
+    // -----------------------------------------------------------------
+    SectionPanel modPanel {"MOD MATRIX", juce::Colour(0xFF8888AA)};
     juce::Label modLabel;
+
+    // -----------------------------------------------------------------
+    // Constants
+    // -----------------------------------------------------------------
+    static constexpr int kKnob    = 42;
+    static constexpr int kLabelH  = 14;
+    static constexpr int kComboH  = 24;
+    static constexpr int kGap     = 8;
+    static constexpr int kPanelPad = 32;   // top padding inside a panel (title bar)
+    static constexpr int kInset   = 4;     // inner padding
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessorEditor)
 };
