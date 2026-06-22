@@ -112,6 +112,11 @@ private:
     // -----------------------------------------------------------------
     KnobGroup masterGain, polyphony, pitchBend;
 
+    // Preset browser
+    juce::ComboBox presetBox;
+    void loadPreset(int idx);
+    void initPresets();
+
     // -----------------------------------------------------------------
     // Oscillators × 3
     // -----------------------------------------------------------------

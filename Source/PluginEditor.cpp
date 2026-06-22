@@ -356,6 +356,9 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     addAndMakeVisible (modPanel);
 
     // Global
+    // Preset selector
+    addAndMakeVisible(presetBox);
+    initPresets();
     masterGain.setup ("masterGain",      apvts, 0.0f, 1.0f, 0.01f, 0.5f,  "GAIN",  " dB", this, laf.get());
     polyphony.setup ("polyphony",        apvts, 1.0f, 16.0f, 1.0f, 8.0f,  "VOICES","",    this, laf.get());
     pitchBend.setup  ("pitchBendRange",  apvts, 0.0f, 24.0f, 0.5f, 2.0f,  "BEND",  " st", this, laf.get());
@@ -592,7 +595,12 @@ void AnalogSynthAudioProcessorEditor::resized()
     auto hdr  = b.removeFromTop (48);
 
     // global knobs (top-right)
-    auto gb = hdr.removeFromRight (200).reduced (4);
+
+    // Preset selector (in header, next to global knobs)
+    auto pset = hdr.removeFromRight(260).reduced(4);
+    presetBox.setBounds(pset.removeFromLeft(120).reduced(2));
+    auto gb2 = pset;
+    auto gb = gb2;
     int  gw = gb.getWidth() / 3;
     masterGain.slider.setBounds (gb.removeFromLeft (gw).reduced (2));
     polyphony.slider.setBounds   (gb.removeFromLeft (gw).reduced (2));
@@ -813,4 +821,126 @@ void AnalogSynthAudioProcessorEditor::resized()
     R.removeFromTop (4);
     modPanel.setBounds (R);
     modLabel.setBounds (R.reduced (8, 26).removeFromBottom (20));
+}
+
+//==============================================================================
+// Presets
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::initPresets()
+{
+    juce::StringArray names = {
+        "Init Saw",
+        "Warm Pad",
+        "Pluck Bass",
+        "Bright Lead",
+        "Dark Ambient",
+        "Arp Ready"
+    };
+    for (int i = 0; i < names.size(); ++i)
+        presetBox.addItem(names[i], i + 1);
+    presetBox.setSelectedId(1, juce::dontSendNotification);
+    presetBox.onChange = [this]() {
+        loadPreset(presetBox.getSelectedId() - 1);
+    };
+}
+
+void AnalogSynthAudioProcessorEditor::loadPreset(int idx)
+{
+    auto setF = [&](const char* id, float v) {
+        if (auto* p = apvts.getParameter(id))
+            p->setValueNotifyingHost(v);
+    };
+    auto setI = [&](const char* id, int v) {
+        if (auto* p = apvts.getParameter(id))
+            p->setValueNotifyingHost(p->convertTo0to1((float)v));
+    };
+
+    // Reset to defaults first
+    // Osc waves to Saw
+    setI("osc1Wave", 2); setI("osc2Wave", 2); setI("osc3Wave", 2);
+    setF("osc1Level", 0.7f); setF("osc2Level", 0.5f); setF("osc3Level", 0.3f);
+    setF("osc1Pitch", 0); setF("osc2Pitch", 0); setF("osc3Pitch", 0);
+    setF("osc1FineTune", 0); setF("osc2FineTune", 0); setF("osc3FineTune", 0);
+    setF("osc1Pan", 0); setF("osc2Pan", 0); setF("osc3Pan", 0);
+    setI("osc1Unison", 1); setI("osc2Unison", 1); setI("osc3Unison", 1);
+    setF("osc1Detune", 0); setF("osc2Detune", 0); setF("osc3Detune", 0);
+    setF("osc1PulseWidth", 0.5f); setF("osc2PulseWidth", 0.5f); setF("osc3PulseWidth", 0.5f);
+    setI("osc1WavetableIndex", 0); setI("osc2WavetableIndex", 0); setI("osc3WavetableIndex", 0);
+    setF("osc1Scan", 0); setF("osc2Scan", 0); setF("osc3Scan", 0);
+    setF("subLevel", 0); setF("noiseLevel", 0);
+    setI("filterType", 0);  // LP 4-Pole
+    setF("filterCutoff", 1000.0f); setF("filterResonance", 0);
+    setF("filterDrive", 0); setF("filterKeyTrack", 0); setF("filterVelTrack", 0);
+    setF("ampAttack", 0.01f); setF("ampDecay", 0.3f); setF("ampSustain", 0.7f); setF("ampRelease", 0.3f);
+    setF("ampVelSens", 0.5f);
+    setF("filtAttack", 0.01f); setF("filtDecay", 0.3f); setF("filtSustain", 0); setF("filtRelease", 0.3f);
+    setF("filtAmount", 0.5f); setF("filtVelSens", 0);
+    setI("lfo1Wave", 0); setF("lfo1Rate", 1.0f); setF("lfo1Amount", 0); setF("lfo1Delay", 0); setF("lfo1Fade", 0);
+    setI("lfo2Wave", 0); setF("lfo2Rate", 5.0f); setF("lfo2Amount", 0); setF("lfo2Delay", 0); setF("lfo2Fade", 0);
+    setF("masterGain", 0.5f);
+    setI("polyphony", 8);
+    setF("pitchBendRange", 2.0f);
+
+    // Arp defaults
+    setI("arpEnabled", 0);
+    setI("arpMode", 0); setF("arpRate", 1); setI("arpOctaves", 1); setF("arpGate", 0.8f);
+
+    switch (idx)
+    {
+    case 0: // Init Saw — default (already set)
+        break;
+    case 1: // Warm Pad
+        setI("osc1Wave", 0); setI("osc2Wave", 1); setI("osc3Wave", 4);  // Sine, Triangle, Noise
+        setF("osc1Level", 0.5f); setF("osc2Level", 0.4f); setF("osc3Level", 0.15f);
+        setF("osc2Pitch", -12); setF("osc3Pitch", 7);
+        setF("osc2Detune", 7); setF("osc3Detune", 12);
+        setF("filterCutoff", 800.0f); setF("filterResonance", 0.3f);
+        setF("ampAttack", 0.3f); setF("ampDecay", 0.8f); setF("ampSustain", 0.6f); setF("ampRelease", 1.5f);
+        setI("lfo1Wave", 0); setF("lfo1Rate", 0.3f); setF("lfo1Amount", 0.15f);
+        setF("filtAttack", 0.5f); setF("filtDecay", 1.0f); setF("filtAmount", 0.3f);
+        break;
+    case 2: // Pluck Bass
+        setI("osc1Wave", 2); // Saw
+        setF("osc1Level", 0.8f);
+        setF("osc1Pitch", -12);
+        setF("filterCutoff", 400.0f); setF("filterResonance", 0.4f); setF("filterDrive", 0.3f);
+        setF("ampAttack", 0.001f); setF("ampDecay", 0.15f); setF("ampSustain", 0.1f); setF("ampRelease", 0.1f);
+        setF("filtAttack", 0.001f); setF("filtDecay", 0.1f); setF("filtAmount", 0.6f);
+        setF("ampVelSens", 0.8f);
+        break;
+    case 3: // Bright Lead
+        setI("osc1Wave", 2); setI("osc2Wave", 2); // Both Saw
+        setF("osc1Level", 0.7f); setF("osc2Level", 0.5f);
+        setF("osc2Pitch", 7); setF("osc2Detune", 5);
+        setI("osc1Unison", 3); setF("osc1Detune", 8);
+        setF("filterCutoff", 3000.0f); setF("filterResonance", 0.2f);
+        setF("ampAttack", 0.005f); setF("ampDecay", 0.2f); setF("ampSustain", 0.6f); setF("ampRelease", 0.3f);
+        setF("masterGain", 0.6f);
+        setF("pitchBendRange", 12.0f);
+        break;
+    case 4: // Dark Ambient
+        setI("osc1Wave", 4); setI("osc2Wave", 4); // Noise for texture
+        setI("osc3Wave", 5); // Wavetable
+        setF("osc1Level", 0.1f); setF("osc2Level", 0.1f); setF("osc3Level", 0.6f);
+        setI("osc3WavetableIndex", 9); // Vocal
+        setF("osc3Pitch", -12);
+        setF("filterCutoff", 300.0f); setF("filterResonance", 0.6f);
+        setF("ampAttack", 1.0f); setF("ampDecay", 2.0f); setF("ampSustain", 0.5f); setF("ampRelease", 3.0f);
+        setI("lfo1Wave", 0); setF("lfo1Rate", 0.2f); setF("lfo1Amount", 0.3f);
+        setF("filtAmount", 0.5f);
+        setF("noiseLevel", 0.05f);
+        break;
+    case 5: // Arp Ready
+        setI("osc1Wave", 2); setI("osc2Wave", 1);
+        setF("osc1Level", 0.6f); setF("osc2Level", 0.4f);
+        setI("osc1Unison", 2); setF("osc1Detune", 5);
+        setF("filterCutoff", 1200.0f); setF("filterResonance", 0.15f);
+        setF("ampAttack", 0.01f); setF("ampDecay", 0.2f); setF("ampSustain", 0.5f); setF("ampRelease", 0.2f);
+        setI("arpEnabled", 1);
+        setI("arpMode", 2); // Up-Down
+        setI("arpOctaves", 2);
+        setF("arpGate", 0.6f);
+        setF("filtAmount", 0.2f);
+        break;
+    }
 }
