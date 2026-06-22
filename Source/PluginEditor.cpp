@@ -517,10 +517,61 @@ void AnalogSynthAudioProcessorEditor::buildUI()
         arpToggle.setColour(juce::TextButton::buttonColourId, on ? juce::Colour(0xFF26A69A) : juce::Colour(0xFF3A3A4A));
     };
     arpToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::arpEnabled, arpToggle);
-    setCombo(arpMode, "arpMode", apvts, arpModeA, {"Up", "Down", "Up-Down", "Random"}, 0, this, laf.get());
+    setCombo(arpMode, "arpMode", apvts, arpModeA, {"Up", "Down", "Up-Down", "Random", "Order Played", "Custom"}, 0, this, laf.get());
     setCombo(arpRate, "arpRate", apvts, arpRateA, {"1/4", "1/8", "1/16", "1/8T", "1/16T", "1/8D"}, 1, this, laf.get());
     arpOctaves.setup("arpOctaves", apvts, 1.0f, 4.0f, 1.0f, 1.0f, "OCTAVES", "", this, laf.get());
     arpGate.setup("arpGate", apvts, 0.1f, 1.0f, 0.01f, 0.8f, "GATE", "", this, laf.get());
+    arpSteps.setup("arpSteps", apvts, 2.0f, 16.0f, 1.0f, 8.0f, "STEPS", "", this, laf.get());
+    arpSwing.setup("arpSwing", apvts, 0.0f, 1.0f, 0.01f, 0.0f, "SWING", "", this, laf.get());
+
+    // Step sequencer grid (16 steps)
+    addAndMakeVisible(stepPanel);
+    stepPanel.setVisible(false);  // hidden until Custom mode selected
+    for (int i = 0; i < 16; ++i)
+    {
+        auto& slider = arpStepSliders[i];
+        auto& toggle = arpStepToggles[i];
+        auto& label  = arpStepLabels[i];
+
+        addChildComponent(slider);
+        addChildComponent(toggle);
+        addChildComponent(label);
+
+        slider.setSliderStyle(juce::Slider::LinearVertical);
+        slider.setRange(-24.0, 24.0, 1.0);
+        slider.setValue(0.0);
+        slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        slider.setLookAndFeel(laf.get());
+        slider.setColour(juce::Slider::trackColourId, juce::Colour(0xFF00897B));
+        slider.setColour(juce::Slider::backgroundColourId, juce::Colour(0xFF1A1A2E));
+
+        toggle.setLookAndFeel(laf.get());
+        toggle.setColour(juce::ToggleButton::tickColourId, juce::Colour(0xFF26A69A));
+        toggle.setColour(juce::ToggleButton::tickDisabledColourId, juce::Colour(0xFF333344));
+
+        label.setText(juce::String(i + 1), juce::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+        label.setFont(juce::FontOptions(9.0f));
+        label.setColour(juce::Label::textColourId, juce::Colour(0xFF666677));
+
+        arpStepSliderA[i] = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            apvts, ParameterIDs::arpStepOffset(i), slider);
+        arpStepToggleA[i] = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            apvts, ParameterIDs::arpStepEnable(i), toggle);
+    }
+
+    // Show/hide step grid based on arp mode
+    arpMode.onChange = [this]() {
+        bool isCustom = (arpMode.getSelectedId() - 1) == 5;  // "Custom" is index 5
+        stepPanel.setVisible(isCustom);
+        for (int i = 0; i < 16; ++i)
+        {
+            arpStepSliders[i].setVisible(isCustom);
+            arpStepToggles[i].setVisible(isCustom);
+            arpStepLabels[i].setVisible(isCustom);
+        }
+        resized();  // relayout
+    };
 
     // FX + Macro placeholder knobs (visual only)
     auto setupPh = [&](KnobGroup& k, const juce::String& txt, const juce::String& suf, float def, juce::Colour col) {
@@ -775,7 +826,7 @@ void AnalogSynthAudioProcessorEditor::resized()
 
     // ----- ARPEGGIATOR -----
     R.removeFromTop(4);
-    auto arpB = R.removeFromTop(100);
+    auto arpB = R.removeFromTop(130);
     arpPanel.setBounds(arpB);
     auto ari = arpB.reduced(8, 30);
     arpToggle.setBounds(ari.removeFromTop(22).removeFromLeft(50).reduced(2));
@@ -783,9 +834,28 @@ void AnalogSynthAudioProcessorEditor::resized()
     arpMode.setBounds(arcr.removeFromLeft(arcr.getWidth() / 2 - 2).reduced(1));
     arpRate.setBounds(arcr.removeFromLeft(arcr.getWidth() / 2).reduced(1));
     auto arkr = ari.removeFromTop(56);
-    int akw2 = arkr.getWidth() / 2;
-    arpOctaves.slider.setBounds(arkr.removeFromLeft(akw2).reduced(1));
-    arpGate.slider.setBounds(arkr.reduced(1));
+    int akw4 = arkr.getWidth() / 4;
+    arpOctaves.slider.setBounds(arkr.removeFromLeft(akw4).reduced(1));
+    arpGate.slider.setBounds(arkr.removeFromLeft(akw4).reduced(1));
+    arpSteps.slider.setBounds(arkr.removeFromLeft(akw4).reduced(1));
+    arpSwing.slider.setBounds(arkr.reduced(1));
+
+    // ----- STEP SEQUENCER (Custom mode) -----
+    if (stepPanel.isVisible())
+    {
+        R.removeFromTop(2);
+        auto stepB = R.removeFromTop(120);
+        stepPanel.setBounds(stepB);
+        auto si = stepB.reduced(6, 26);
+        int colW = si.getWidth() / 16;
+        for (int i = 0; i < 16; ++i)
+        {
+            auto col = si.removeFromLeft(colW).reduced(1);
+            arpStepLabels[i].setBounds(col.removeFromTop(14));
+            arpStepToggles[i].setBounds(col.removeFromBottom(16).reduced(1, 0));
+            arpStepSliders[i].setBounds(col.reduced(1, 2));
+        }
+    }
     // ----- FX -----
     R.removeFromTop(4);
     auto fxB = R.removeFromTop(112);
@@ -834,7 +904,8 @@ void AnalogSynthAudioProcessorEditor::initPresets()
         "Pluck Bass",
         "Bright Lead",
         "Dark Ambient",
-        "Arp Ready"
+        "Arp Ready",
+        "Custom Pattern"
     };
     for (int i = 0; i < names.size(); ++i)
         presetBox.addItem(names[i], i + 1);
@@ -884,6 +955,12 @@ void AnalogSynthAudioProcessorEditor::loadPreset(int idx)
     // Arp defaults
     setI("arpEnabled", 0);
     setI("arpMode", 0); setF("arpRate", 1); setI("arpOctaves", 1); setF("arpGate", 0.8f);
+    setI("arpSteps", 8); setF("arpSwing", 0.0f);
+    for (int i = 0; i < 16; ++i)
+    {
+        setI(("arpS" + juce::String(i+1) + "Off").toRawUTF8(), 0);
+        setI(("arpS" + juce::String(i+1) + "En").toRawUTF8(), (i < 8) ? 1 : 0);
+    }
 
     switch (idx)
     {
@@ -940,7 +1017,25 @@ void AnalogSynthAudioProcessorEditor::loadPreset(int idx)
         setI("arpMode", 2); // Up-Down
         setI("arpOctaves", 2);
         setF("arpGate", 0.6f);
+        setF("arpSwing", 0.3f);  // added swing
         setF("filtAmount", 0.2f);
+        break;
+    case 6: // Custom Pattern (step sequencer)
+        setI("osc1Wave", 2); setF("osc1Level", 0.7f);
+        setF("filterCutoff", 800.0f); setF("filterResonance", 0.1f);
+        setF("ampAttack", 0.01f); setF("ampDecay", 0.15f); setF("ampSustain", 0.4f); setF("ampRelease", 0.1f);
+        setI("arpEnabled", 1);
+        setI("arpMode", 5); // Custom
+        setI("arpSteps", 8);
+        setF("arpSwing", 0.0f);
+        setF("arpGate", 0.5f);
+        // Set step pattern: descending arp with varied offsets
+        // Steps: 0, +7, +5, +3, +7, 0, +5, +12
+        setI("arpS1Off", 0);  setI("arpS2Off", 7);  setI("arpS3Off", 5);  setI("arpS4Off", 3);
+        setI("arpS5Off", 7);  setI("arpS6Off", 0);  setI("arpS7Off", 5);  setI("arpS8Off", 12);
+        // Enable first 8 steps, disable 9-16
+        for (int i = 0; i < 8; ++i)  setI(("arpS" + juce::String(i+1) + "En").toRawUTF8(), 1);
+        for (int i = 8; i < 16; ++i) setI(("arpS" + juce::String(i+1) + "En").toRawUTF8(), 0);
         break;
     }
 }

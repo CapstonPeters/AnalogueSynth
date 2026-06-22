@@ -213,7 +213,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     bool arpOn = apvts.getRawParameterValue(ParameterIDs::arpEnabled)->load() > 0.0f;
     if (arpOn)
     {
-        // Collect held notes from MIDI
+        // Collect held notes from MIDI + track play order
         for (const auto metadata : midiMessages)
         {
             auto msg = metadata.getMessage();
@@ -221,22 +221,39 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
             {
                 int n = msg.getNoteNumber();
                 if (std::find(arpNotes.begin(), arpNotes.end(), n) == arpNotes.end())
+                {
                     arpNotes.push_back(n);
+                    arpNoteOrder.push_back(n);  // track play order
+                }
                 std::sort(arpNotes.begin(), arpNotes.end());
             }
             else if (msg.isNoteOff())
             {
-                auto it = std::find(arpNotes.begin(), arpNotes.end(), msg.getNoteNumber());
-                if (it != arpNotes.end()) arpNotes.erase(it);
+                int n = msg.getNoteNumber();
+                auto itN = std::find(arpNotes.begin(), arpNotes.end(), n);
+                if (itN != arpNotes.end()) arpNotes.erase(itN);
+                auto itO = std::find(arpNoteOrder.begin(), arpNoteOrder.end(), n);
+                if (itO != arpNoteOrder.end()) arpNoteOrder.erase(itO);
             }
         }
         midiMessages.clear();
 
-        // Read arp params fresh from APVTS (no 64-block delay)
+        // Read arp params fresh from APVTS
         int    arpModeVal    = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpMode)->load());
         int    arpRateIdx    = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpRate)->load());
         int    arpOctavesVal = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpOctaves)->load());
         float  arpGateVal    = apvts.getRawParameterValue(ParameterIDs::arpGate)->load();
+        int    arpStepsVal   = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpSteps)->load());
+        float  arpSwingVal   = apvts.getRawParameterValue(ParameterIDs::arpSwing)->load();
+
+        // Read per-step offsets and enables for Custom mode
+        int    stepOffsets[16];
+        bool   stepEnables[16];
+        for (int i = 0; i < 16; ++i)
+        {
+            stepOffsets[i] = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpStepOffset(i))->load());
+            stepEnables[i] = apvts.getRawParameterValue(ParameterIDs::arpStepEnable(i))->load() > 0.0f;
+        }
 
         // Determine rate in Hz (at 120 BPM reference)
         static const float rateTable[] = { 2.0f, 4.0f, 8.0f, 6.0f, 12.0f, 2.67f };
@@ -246,15 +263,37 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         double sr = getSampleRate();
         if (sr <= 0) sr = 44100.0;
 
+        double baseStepSamples = sr / arpRateHz;
+
         if (!arpNotes.empty())
         {
             int numNotes = static_cast<int>(arpNotes.size());
             int octaves  = std::clamp(arpOctavesVal, 1, 4);
-            int totalSteps = numNotes * octaves;
+
+            // Determine total steps and effective step count
+            int totalSteps;
+            bool isCustom = (arpModeVal == 5);
+            bool isOrderPlayed = (arpModeVal == 4);
+
+            if (isCustom)
+                totalSteps = std::clamp(arpStepsVal, 2, 16);
+            else
+                totalSteps = numNotes * octaves;
+
+            // Advance step counter with swing
             if (totalSteps > 0)
             {
-                // Advance step counter
-                double stepSamples = sr / arpRateHz;
+                // Compute swing-adjusted step duration for this step
+                double stepSamples = baseStepSamples;
+                if (arpSwingVal > 0.001f && arpRateHz >= 4.0f)  // swing only at 1/8 and faster
+                {
+                    int swingPhase = arpStep % 2;
+                    if (swingPhase == 0)
+                        stepSamples = baseStepSamples * (1.0 - arpSwingVal * 0.5);
+                    else
+                        stepSamples = baseStepSamples * (1.0 + arpSwingVal * 0.5);
+                }
+
                 arpTimer += numSamples;
                 while (arpTimer >= stepSamples && totalSteps > 0)
                 {
@@ -267,46 +306,98 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                     // Reset gate timer for new note
                     arpGateTimer = 0.0;
 
-                    // Calculate next note based on mode
-                    int baseIdx = arpStep % numNotes;
-                    int oct = arpStep / numNotes;
-                    if (oct >= octaves) { arpStep = 0; oct = 0; baseIdx = 0; }
+                    int noteNum = -1;
 
-                    int noteNum = arpNotes[baseIdx] + oct * 12;
-
-                    // Apply mode
-                    int mode = std::clamp(arpModeVal, 0, 3);
-                    if (mode == 0) // Up
+                    if (isCustom)
                     {
+                        // Custom pattern: step through user-defined sequence
+                        int stepIdx = arpStep % totalSteps;
+                        // Find the next enabled step (skip rests/disbled)
+                        int tries = 0;
+                        while (tries < totalSteps && !stepEnables[stepIdx])
+                        {
+                            arpStep++;
+                            stepIdx = arpStep % totalSteps;
+                            tries++;
+                        }
+                        if (stepEnables[stepIdx] && numNotes > 0)
+                        {
+                            int baseNote = arpNotes[stepIdx % numNotes];
+                            int offset = stepOffsets[stepIdx];
+                            noteNum = baseNote + offset;
+                        }
                         arpStep++;
                     }
-                    else if (mode == 1) // Down
+                    else if (isOrderPlayed)
                     {
-                        arpStep--;
-                        if (arpStep < 0) arpStep = totalSteps - 1;
+                        // Play notes in the order they were pressed
+                        if (!arpNoteOrder.empty())
+                        {
+                            int idx = arpStep % static_cast<int>(arpNoteOrder.size());
+                            int oct = (arpStep / static_cast<int>(arpNoteOrder.size())) % octaves;
+                            noteNum = arpNoteOrder[idx] + oct * 12;
+                        }
+                        arpStep++;
                     }
-                    else if (mode == 2) // Up-Down
+                    else
                     {
-                        arpStep += arpDir;
-                        if (arpStep >= totalSteps - 1) arpDir = -1;
-                        else if (arpStep <= 0) arpDir = 1;
-                    }
-                    else // Random
-                    {
-                        arpStep = rand() % totalSteps;
-                    }
-                    arpStep = (arpStep % totalSteps + totalSteps) % totalSteps;
+                        // Standard modes (Up, Down, Up-Down, Random)
+                        int baseIdx = arpStep % numNotes;
+                        int oct = arpStep / numNotes;
+                        if (oct >= octaves) { arpStep = 0; oct = 0; baseIdx = 0; }
 
-                    // Trigger note
-                    arpNoteOut = noteNum;
-                    synth.noteOn(arpNoteOut, 0.8f);
-                    arpNoteHeld = true;
+                        noteNum = arpNotes[baseIdx] + oct * 12;
+
+                        int mode = std::clamp(arpModeVal, 0, 3);
+                        if (mode == 0) // Up
+                        {
+                            arpStep++;
+                        }
+                        else if (mode == 1) // Down
+                        {
+                            arpStep--;
+                            if (arpStep < 0) arpStep = totalSteps - 1;
+                        }
+                        else if (mode == 2) // Up-Down
+                        {
+                            arpStep += arpDir;
+                            if (arpStep >= totalSteps - 1) arpDir = -1;
+                            else if (arpStep <= 0) arpDir = 1;
+                        }
+                        else // Random
+                        {
+                            int next;
+                            do { next = rand() % totalSteps; }
+                            while (totalSteps > 1 && next == arpLastRandom);
+                            arpLastRandom = next;
+                            arpStep = next;
+                        }
+                        arpStep = (arpStep % totalSteps + totalSteps) % totalSteps;
+                    }
+
+                    // Recompute swing for next step
+                    if (arpSwingVal > 0.001f && arpRateHz >= 4.0f)
+                    {
+                        int nextSwingPhase = arpStep % 2;
+                        if (nextSwingPhase == 0)
+                            stepSamples = baseStepSamples * (1.0 - arpSwingVal * 0.5);
+                        else
+                            stepSamples = baseStepSamples * (1.0 + arpSwingVal * 0.5);
+                    }
+
+                    // Trigger note if valid
+                    if (noteNum >= 0)
+                    {
+                        arpNoteOut = noteNum;
+                        synth.noteOn(arpNoteOut, 0.8f);
+                        arpNoteHeld = true;
+                    }
                 }
 
                 // Gate handling: release note when gate time expires
                 if (arpNoteHeld && arpNoteOut >= 0)
                 {
-                    double gateSamples = sr / arpRateHz * std::clamp(arpGateVal, 0.1f, 1.0f);
+                    double gateSamples = baseStepSamples * std::clamp(arpGateVal, 0.1f, 1.0f);
                     arpGateTimer += numSamples;
                     if (arpGateTimer >= gateSamples)
                     {
@@ -329,6 +420,8 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
             arpTimer = 0;
             arpNoteHeld = false;
             arpGateTimer = 0.0;
+            arpLastRandom = -1;
+            arpNoteOrder.clear();
         }
     }
     // Process MIDI
@@ -555,10 +648,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
 
     // Arpeggiator
     addBool(ParameterIDs::arpEnabled, "Arp Enabled", false);
-    addChoice(ParameterIDs::arpMode, "Arp Mode", {"Up", "Down", "Up-Down", "Random"}, 0);
+    addChoice(ParameterIDs::arpMode, "Arp Mode", {"Up", "Down", "Up-Down", "Random", "Order Played", "Custom"}, 0);
     addChoice(ParameterIDs::arpRate, "Arp Rate", {"1/4", "1/8", "1/16", "1/8T", "1/16T", "1/8D"}, 1);
     addInt(ParameterIDs::arpOctaves, "Arp Octaves", 1, 4, 1);
     addFloat(ParameterIDs::arpGate, "Arp Gate", 0.1f, 1.0f, 0.8f);
+    addInt(ParameterIDs::arpSteps, "Arp Steps", 2, 16, 8);
+    addFloat(ParameterIDs::arpSwing, "Arp Swing", 0.0f, 1.0f, 0.0f);
+    // 16 per-step pitch offsets (-24 to +24 semitones)
+    for (int i = 0; i < 16; ++i)
+        addInt(ParameterIDs::arpStepOffset(i), ("Arp Step " + juce::String(i+1) + " Offset").toRawUTF8(), -24, 24, 0);
+    // 16 per-step enables
+    for (int i = 0; i < 16; ++i)
+        addBool(ParameterIDs::arpStepEnable(i), ("Arp Step " + juce::String(i+1) + " Enable").toRawUTF8(), i < 8);
     // For now we'll skip detailed mod matrix params and use defaults
     
     return { params.begin(), params.end() };
@@ -653,6 +754,13 @@ void AnalogSynthAudioProcessor::updateSynthParams()
     synthParams.arpRate    = getF(ParameterIDs::arpRate);
     synthParams.arpOctaves = static_cast<int>(getI(ParameterIDs::arpOctaves));
     synthParams.arpGate    = getF(ParameterIDs::arpGate);
+    synthParams.arpSteps   = static_cast<int>(getI(ParameterIDs::arpSteps));
+    synthParams.arpSwing   = getF(ParameterIDs::arpSwing);
+    for (int i = 0; i < 16; ++i)
+    {
+        synthParams.arpStepOffsets[i] = static_cast<int>(getI(ParameterIDs::arpStepOffset(i)));
+        synthParams.arpStepEnables[i] = getI(ParameterIDs::arpStepEnable(i)) > 0;
+    }
     // Apply to synth
     synth.setParams(synthParams);
 }

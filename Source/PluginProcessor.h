@@ -142,6 +142,23 @@ struct ParameterIDs
     static constexpr auto arpRate = "arpRate";
     static constexpr auto arpOctaves = "arpOctaves";
     static constexpr auto arpGate = "arpGate";
+    static constexpr auto arpSteps = "arpSteps";
+    static constexpr auto arpSwing = "arpSwing";
+    // Per-step offsets (-24 to +24 semitones) and enables
+    static const char* arpStepOffset(int i) {
+        static const char* ids[] = {"arpS1Off","arpS2Off","arpS3Off","arpS4Off",
+            "arpS5Off","arpS6Off","arpS7Off","arpS8Off",
+            "arpS9Off","arpS10Off","arpS11Off","arpS12Off",
+            "arpS13Off","arpS14Off","arpS15Off","arpS16Off"};
+        return ids[std::clamp(i, 0, 15)];
+    }
+    static const char* arpStepEnable(int i) {
+        static const char* ids[] = {"arpS1En","arpS2En","arpS3En","arpS4En",
+            "arpS5En","arpS6En","arpS7En","arpS8En",
+            "arpS9En","arpS10En","arpS11En","arpS12En",
+            "arpS13En","arpS14En","arpS15En","arpS16En"};
+        return ids[std::clamp(i, 0, 15)];
+    }
 };
 
 //==============================================================================
@@ -997,10 +1014,14 @@ struct SynthParams
 
     // Arpeggiator
     bool arpEnabled = false;
-    int  arpMode    = 0;      // 0=Up, 1=Down, 2=Up-Down, 3=Random
-    float arpRate   = 1.0f;   // 0=1/4, 1=1/8, 2=1/16, 3=1/8T, 4=1/16T
+    int  arpMode    = 0;      // 0=Up, 1=Down, 2=Up-Down, 3=Random, 4=OrderPlayed, 5=Custom
+    float arpRate   = 1.0f;   // 0=1/4, 1=1/8, 2=1/16, 3=1/8T, 4=1/16T, 5=1/8D
     int  arpOctaves = 1;      // 1-4
     float arpGate   = 0.8f;   // 0.1-1.0
+    int  arpSteps   = 8;      // 2-16 steps for custom pattern
+    float arpSwing  = 0.0f;   // 0.0-1.0 swing amount
+    int  arpStepOffsets[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  // semitones
+    bool arpStepEnables[16] = {true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true};
 };
 
 //==============================================================================
@@ -1193,6 +1214,7 @@ private:
 
     // Arpeggiator state
     std::vector<int> arpNotes;         // held notes (MIDI note numbers)
+    std::vector<int> arpNoteOrder;     // play order for "Order Played" mode
     int    arpStep     = 0;            // current step index
     double arpTimer    = 0.0;          // per-sample accumulator
     int    arpNoteOut  = -1;           // currently sounding arp note
@@ -1200,6 +1222,7 @@ private:
     int    arpDir      = 1;            // +1 = up, -1 = down
     bool   arpNoteHeld = false;        // whether a note is currently gated on
     double arpGateTimer = 0.0;         // per-sample gate accumulator
+    int    arpLastRandom = -1;         // avoid immediate repeat in Random mode
     
     // Full synth
     SynthEngine synth;

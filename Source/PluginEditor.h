@@ -165,11 +165,19 @@ private:
     // Arpeggiator
     // -----------------------------------------------------------------
     juce::ComboBox arpMode, arpRate;
-    KnobGroup arpOctaves, arpGate;
+    KnobGroup arpOctaves, arpGate, arpSteps, arpSwing;
     juce::TextButton arpToggle;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> arpModeA, arpRateA;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> arpToggleA;
     SectionPanel arpPanel {"ARPEGGIATOR", juce::Colour(0xFF26A69A)};
+    
+    // Step sequencer grid (visible in Custom mode)
+    SectionPanel stepPanel {"STEP SEQUENCER", juce::Colour(0xFF00897B)};
+    juce::Slider arpStepSliders[16];
+    juce::ToggleButton arpStepToggles[16];
+    juce::Label arpStepLabels[16];
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> arpStepSliderA[16];
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> arpStepToggleA[16];
 
     // -----------------------------------------------------------------
     // FX
