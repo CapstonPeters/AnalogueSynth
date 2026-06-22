@@ -46,6 +46,10 @@ void SynthVoice::updateParams(const SynthParams& p)
     // LFOs
     lfo1.setParams(static_cast<LFO::WaveType>(p.lfo1Wave), p.lfo1Rate, p.lfo1Amount, p.lfo1Delay, p.lfo1Fade);
     lfo2.setParams(static_cast<LFO::WaveType>(p.lfo2Wave), p.lfo2Rate, p.lfo2Amount, p.lfo2Delay, p.lfo2Fade);
+    lfo3.setParams(static_cast<LFO::WaveType>(p.lfo3Wave), p.lfo3Rate, p.lfo3Amount, p.lfo3Delay, p.lfo3Fade);
+    
+    // Envelope 3
+    env3.setParams(p.env3Attack, p.env3Decay, p.env3Sustain, p.env3Release);
     
     // Mod Matrix
     modMatrix = p.modMatrix;
@@ -55,6 +59,9 @@ void SynthVoice::updateParams(const SynthParams& p)
     syncFM.osc2Sync = p.osc2Sync;
     syncFM.osc3FM = p.osc3FM;
     syncFM.osc3FMAmount = p.osc3FMAmount;
+    
+    // Drift
+    driftAmount = p.driftAmount;
 }
 
 void SynthVoice::process(float& outL, float& outR)
@@ -72,12 +79,15 @@ void SynthVoice::process(float& outL, float& outR)
     // Process LFOs
     lfo1Out = lfo1.process();
     lfo2Out = lfo2.process();
+    lfo3Out = lfo3.process();
     
     // Process Envelopes
     ampEnvOut = ampEnv.process();
     filtEnvOut = filtEnv.process();
+    env3Out = env3.process();
     
-    if (!ampEnv.isActive() && !filtEnv.isActive() && !lfo1.isActive() && !lfo2.isActive())
+    if (!ampEnv.isActive() && !filtEnv.isActive() && !env3.isActive()
+        && !lfo1.isActive() && !lfo2.isActive() && !lfo3.isActive())
     {
         // All done, check if oscillators are still running
         bool anyOscActive = false;
@@ -110,6 +120,19 @@ void SynthVoice::process(float& outL, float& outR)
     // Oscillator pitch modulation (LFO1 -> pitch)
     float pitchMod = modMatrix.getModulation(ModDest::Osc1Pitch, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, mw, at, pb, expr);
     float pitchMult = std::pow(2.0f, pitchMod / 12.0f) * pbFactor;
+    
+    // Analog drift — slowly wander pitch per voice
+    if (driftAmount > 0.001f)
+    {
+        driftCounter++;
+        if (driftCounter > 200)  // update ~200Hz
+        {
+            driftCounter = 0;
+            float target = (rand() / (float)RAND_MAX - 0.5f) * driftAmount * 0.5f;
+            driftValue += (target - driftValue) * 0.01f;  // smooth
+        }
+        pitchMult *= std::pow(2.0f, driftValue / 12.0f);
+    }
     
     // Process oscillators with sync/FM routing
     float oscSumL = 0, oscSumR = 0;
@@ -630,6 +653,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParameterIDs::ampRelease, "Amp Release", 0.001f, 10.0f, 0.3f, "s");
     addFloat(ParameterIDs::ampVelSens, "Amp Vel Sens", 0.0f, 1.0f, 0.5f);
     
+    // Drift
+    addFloat(ParameterIDs::driftAmount, "Drift", 0.0f, 1.0f, 0.0f);
+    
     // Filter Envelope
     addFloat(ParameterIDs::filtAttack, "Filt Attack", 0.001f, 10.0f, 0.01f, "s");
     addFloat(ParameterIDs::filtDecay, "Filt Decay", 0.001f, 10.0f, 0.3f, "s");
@@ -637,6 +663,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParameterIDs::filtRelease, "Filt Release", 0.001f, 10.0f, 0.3f, "s");
     addFloat(ParameterIDs::filtAmount, "Filt Amount", -1.0f, 1.0f, 0.5f);
     addFloat(ParameterIDs::filtVelSens, "Filt Vel Sens", 0.0f, 1.0f, 0.0f);
+    
+    // Envelope 3 (assignable)
+    addFloat(ParameterIDs::env3Attack, "Env3 Attack", 0.001f, 10.0f, 0.01f, "s");
+    addFloat(ParameterIDs::env3Decay, "Env3 Decay", 0.001f, 10.0f, 0.3f, "s");
+    addFloat(ParameterIDs::env3Sustain, "Env3 Sustain", 0.0f, 1.0f, 0.7f);
+    addFloat(ParameterIDs::env3Release, "Env3 Release", 0.001f, 10.0f, 0.3f, "s");
     
     // LFO 1
     addChoice(ParameterIDs::lfo1Wave, "LFO 1 Wave", lfoWaves, 0);
@@ -795,6 +827,7 @@ void AnalogSynthAudioProcessor::updateSynthParams()
     synthParams.ampSustain = getF(ParameterIDs::ampSustain);
     synthParams.ampRelease = getF(ParameterIDs::ampRelease);
     synthParams.ampVelSens = getF(ParameterIDs::ampVelSens);
+    synthParams.driftAmount = getF(ParameterIDs::driftAmount);
     
     // Filter Envelope
     synthParams.filtAttack = getF(ParameterIDs::filtAttack);
@@ -817,6 +850,19 @@ void AnalogSynthAudioProcessor::updateSynthParams()
     synthParams.lfo2Amount = getF(ParameterIDs::lfo2Amount);
     synthParams.lfo2Delay = getF(ParameterIDs::lfo2Delay);
     synthParams.lfo2Fade = getF(ParameterIDs::lfo2Fade);
+    
+    // LFO 3
+    synthParams.lfo3Wave = static_cast<int>(getI(ParameterIDs::lfo3Wave));
+    synthParams.lfo3Rate = getF(ParameterIDs::lfo3Rate);
+    synthParams.lfo3Amount = getF(ParameterIDs::lfo3Amount);
+    synthParams.lfo3Delay = getF(ParameterIDs::lfo3Delay);
+    synthParams.lfo3Fade = getF(ParameterIDs::lfo3Fade);
+    
+    // Envelope 3
+    synthParams.env3Attack = getF(ParameterIDs::env3Attack);
+    synthParams.env3Decay = getF(ParameterIDs::env3Decay);
+    synthParams.env3Sustain = getF(ParameterIDs::env3Sustain);
+    synthParams.env3Release = getF(ParameterIDs::env3Release);
     
 
     // Arpeggiator

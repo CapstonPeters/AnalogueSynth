@@ -134,6 +134,15 @@ struct ParameterIDs
     static constexpr auto lfo2OneShot = "lfo2OneShot";
     static constexpr auto lfo3OneShot = "lfo3OneShot";
     
+    // Envelope 3 (assignable)
+    static constexpr auto env3Attack = "env3Attack";
+    static constexpr auto env3Decay = "env3Decay";
+    static constexpr auto env3Sustain = "env3Sustain";
+    static constexpr auto env3Release = "env3Release";
+    
+    // Drift
+    static constexpr auto driftAmount = "driftAmount";
+    
     // Mod Matrix (8 slots: source, dest, amount)
     static constexpr auto modMatrixSource = "modMatrixSource";
     static constexpr auto modMatrixDest = "modMatrixDest";
@@ -1072,8 +1081,10 @@ public:
         noiseOsc.prepare(sampleRate);
         ampEnv.prepare(sampleRate);
         filtEnv.prepare(sampleRate);
+        env3.prepare(sampleRate);
         lfo1.prepare(sampleRate);
         lfo2.prepare(sampleRate);
+        lfo3.prepare(sampleRate);
         filter.prepare(sampleRate);
     }
     
@@ -1094,11 +1105,16 @@ public:
         
         ampEnv.noteOn(velocity, ampVelSens);
         filtEnv.noteOn(velocity, filtVelSens);
+        env3.noteOn(velocity, 0.5f);
         lfo1.noteOn();
         lfo2.noteOn();
+        lfo3.noteOn();
         
         active = true;
         samplesSinceNoteOn = 0;
+        // Initialize drift randomly per voice
+        driftValue = (rand() / (float)RAND_MAX - 0.5f) * driftAmount * 0.1f;
+        driftCounter = 0;
     }
     
     void stopNote()
@@ -1108,8 +1124,10 @@ public:
         noiseOsc.noteOff();
         ampEnv.noteOff();
         filtEnv.noteOff();
+        env3.noteOff();
         lfo1.noteOff();
         lfo2.noteOff();
+        lfo3.noteOff();
     }
     
     bool isActive() const { return active; }
@@ -1145,6 +1163,11 @@ private:
     // Sync + FM state
     struct SyncFMState { bool osc2Sync = false; bool osc3FM = false; float osc3FMAmount = 0.0f; } syncFM;
     
+    // Drift
+    float driftAmount = 0.0f;
+    float driftValue = 0.0f;         // current smoothed drift offset
+    int driftCounter = 0;
+    
     // Mod Matrix (copied from params)
     ModMatrix modMatrix;
     float filtAmount = 0.5f;
@@ -1165,16 +1188,18 @@ private:
     // Envelopes
     ADSREnvelope ampEnv;
     ADSREnvelope filtEnv;
+    ADSREnvelope env3;
     
     // LFOs
     LFO lfo1;
     LFO lfo2;
+    LFO lfo3;
     
     // Filter
     LadderFilter filter;
     
     // Modulation values (per block)
-    float lfo1Out = 0, lfo2Out = 0, ampEnvOut = 0, filtEnvOut = 0;
+    float lfo1Out = 0, lfo2Out = 0, lfo3Out = 0, ampEnvOut = 0, filtEnvOut = 0, env3Out = 0;
     float modWheel = 0, aftertouch = 0, pitchBend = 0, exprPedal = 1.0f;
     
     // Safety
@@ -1208,6 +1233,7 @@ struct SynthParams
     bool osc2Sync = false;      // hard sync osc2 → osc1
     bool osc3FM = false;        // FM osc3 → osc1
     float osc3FMAmount = 0.0f;  // FM depth (0-1)
+    float driftAmount = 0.0f;   // analog drift (0-1)
     
     struct SubParams { int wave = 0; float level = 0.0f; float pitch = -12.0f; } sub;
     struct NoiseParams { int type = 0; float level = 0.0f; } noise;
@@ -1248,6 +1274,19 @@ struct SynthParams
     float lfo2Amount = 0.0f;
     float lfo2Delay = 0.0f;
     float lfo2Fade = 0.0f;
+
+    // LFO 3
+    int lfo3Wave = 1;
+    float lfo3Rate = 5.0f;
+    float lfo3Amount = 0.0f;
+    float lfo3Delay = 0.0f;
+    float lfo3Fade = 0.0f;
+    
+    // Envelope 3
+    float env3Attack = 0.01f;
+    float env3Decay = 0.3f;
+    float env3Sustain = 0.7f;
+    float env3Release = 0.3f;
     
     // Mod Matrix
     ModMatrix modMatrix;
