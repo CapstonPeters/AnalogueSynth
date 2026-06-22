@@ -396,6 +396,14 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc2PW.setup  ("osc2PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
     osc2Scn.setup ("osc2Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
     addAndMakeVisible (wf2);
+    // Sync toggle
+    addAndMakeVisible(osc2SyncToggle);
+    osc2SyncToggle.setClickingTogglesState(true);
+    osc2SyncToggle.setLookAndFeel(laf.get());
+    osc2SyncToggle.setButtonText("SYNC");
+    osc2SyncToggle.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF00E5B0));
+    osc2SyncToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF00E5B0));
+    osc2SyncToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::osc2Sync, osc2SyncToggle);
 
     {
         auto chainW2 = osc2Wave.onChange;
@@ -416,6 +424,14 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc3PW.setup  ("osc3PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
     osc3Scn.setup ("osc3Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
     addAndMakeVisible (wf3);
+    // FM toggle
+    addAndMakeVisible(osc3FMToggle);
+    osc3FMToggle.setClickingTogglesState(true);
+    osc3FMToggle.setLookAndFeel(laf.get());
+    osc3FMToggle.setButtonText("FM");
+    osc3FMToggle.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF00E5B0));
+    osc3FMToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF00E5B0));
+    osc3FMToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::osc3FM, osc3FMToggle);
 
     {
         auto chainW3 = osc3Wave.onChange;
@@ -757,6 +773,10 @@ void AnalogSynthAudioProcessorEditor::resized()
     layOsc (osc1Wave, osc1WT, wf1, osc1Lev,osc1Pit,osc1Fin,osc1Pan,osc1Uni,osc1Det,osc1PW,osc1Scn, o1);
     layOsc (osc2Wave, osc2WT, wf2, osc2Lev,osc2Pit,osc2Fin,osc2Pan,osc2Uni,osc2Det,osc2PW,osc2Scn, o2);
     layOsc (osc3Wave, osc3WT, wf3, osc3Lev,osc3Pit,osc3Fin,osc3Pan,osc3Uni,osc3Det,osc3PW,osc3Scn, o3);
+
+    // Sync/FM toggles — place at bottom of each osc column
+    osc2SyncToggle.setBounds(o2.removeFromBottom(18).reduced(2).removeFromRight(45));
+    osc3FMToggle.setBounds(o3.removeFromBottom(18).reduced(2).removeFromRight(45));
 
     // Sub + Noise (below osc)
     auto sn = oscB.reduced (6, 0).removeFromBottom (48);

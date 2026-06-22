@@ -32,6 +32,9 @@ struct ParameterIDs
     static constexpr auto osc1PulseWidth = "osc1PulseWidth";
     static constexpr auto osc1WavetableIndex = "osc1WavetableIndex";
     static constexpr auto osc1Scan = "osc1Scan";
+    static constexpr auto osc2Sync = "osc2Sync";  // hard sync osc2→osc1
+    static constexpr auto osc3FM = "osc3FM";      // FM osc3→osc1
+    static constexpr auto osc3FMAmount = "osc3FMAmount";
     
     static constexpr auto osc2Wave = "osc2Wave";
     static constexpr auto osc2Level = "osc2Level";
@@ -342,6 +345,9 @@ public:
     }
     void noteOff() { active = false; }
     bool isActive() const { return active; }
+    void resetPhase() { for (auto& osc : unisonOscs) osc.phase = 0; }
+    float getPhase() const { return static_cast<float>(unisonOscs[0].phase); }
+    void setFM(float f) { fmMod = f; }  // per-sample FM modulation
     
     float process()
     {
@@ -355,6 +361,7 @@ public:
             auto& osc = unisonOscs[v];
             float voiceFreq = freq * std::pow(2.0f, detune * (v - (voices - 1) * 0.5f) / 1200.0f);
             float phaseInc = voiceFreq / sr * 2.0 * juce::MathConstants<double>::pi;
+            phaseInc *= (1.0 + fmMod); // audio-rate FM
             osc.phaseInc = phaseInc;
             
             float sample = 0.0f;
@@ -415,6 +422,7 @@ private:
     WaveType waveType = Saw;
     int wavetableIdx = 0;
     float scan = 0.0f; // 0.0 = pure selected table, 1.0 = crossfaded fully to next table
+    float fmMod = 0.0f; // per-sample FM amount
     FastRandom noiseGen;
     std::array<UnisonOsc, 8> unisonOscs;
     
@@ -1134,6 +1142,9 @@ private:
     float ampVelSens = 0.5f;
     float filtVelSens = 0.0f;
     
+    // Sync + FM state
+    struct SyncFMState { bool osc2Sync = false; bool osc3FM = false; float osc3FMAmount = 0.0f; } syncFM;
+    
     // Mod Matrix (copied from params)
     ModMatrix modMatrix;
     float filtAmount = 0.5f;
@@ -1194,6 +1205,9 @@ struct SynthParams
         float scan = 0.0f; // 0.0 = start of selected table, 1.0 = next table
     };
     OscParams osc[3];
+    bool osc2Sync = false;      // hard sync osc2 → osc1
+    bool osc3FM = false;        // FM osc3 → osc1
+    float osc3FMAmount = 0.0f;  // FM depth (0-1)
     
     struct SubParams { int wave = 0; float level = 0.0f; float pitch = -12.0f; } sub;
     struct NoiseParams { int type = 0; float level = 0.0f; } noise;

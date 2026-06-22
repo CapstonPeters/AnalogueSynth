@@ -137,6 +137,10 @@ private:
 
     WaveformPreview wf1, wf2, wf3;
     SectionPanel oscPanel {"OSCILLATORS", juce::Colour(0xFF00E5B0)};
+    
+    // Sync + FM toggles
+    juce::TextButton osc2SyncToggle, osc3FMToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> osc2SyncToggleA, osc3FMToggleA;
 
     // -----------------------------------------------------------------
     // Filter

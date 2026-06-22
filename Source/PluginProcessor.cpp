@@ -50,6 +50,11 @@ void SynthVoice::updateParams(const SynthParams& p)
     // Mod Matrix
     modMatrix = p.modMatrix;
     filtAmount = p.filtAmount;
+    
+    // Sync + FM
+    syncFM.osc2Sync = p.osc2Sync;
+    syncFM.osc3FM = p.osc3FM;
+    syncFM.osc3FMAmount = p.osc3FMAmount;
 }
 
 void SynthVoice::process(float& outL, float& outR)
@@ -106,15 +111,50 @@ void SynthVoice::process(float& outL, float& outR)
     float pitchMod = modMatrix.getModulation(ModDest::Osc1Pitch, lfo1Out, lfo2Out, ampEnvOut, filtEnvOut, velocity, keyTrack, mw, at, pb, expr);
     float pitchMult = std::pow(2.0f, pitchMod / 12.0f) * pbFactor;
     
-    // Process oscillators
+    // Process oscillators with sync/FM routing
     float oscSumL = 0, oscSumR = 0;
     
-    for (int i = 0; i < 3; ++i)
+    // Order: osc3 (FM source) → osc2 (sync source) → osc1 (receives FM+sync)
+    float fmSignal = 0;
+    if (syncFM.osc3FM && oscillators[2].isActive())
     {
-        if (!oscillators[i].isActive()) continue;
-        float sample = oscillators[i].process() * pitchMult;
-        oscSumL += sample * oscillators[i].getLeftGain();
-        oscSumR += sample * oscillators[i].getRightGain();
+        fmSignal = oscillators[2].process();
+        oscSumL += fmSignal * oscillators[2].getLeftGain();
+        oscSumR += fmSignal * oscillators[2].getRightGain();
+    }
+    else if (oscillators[2].isActive())
+    {
+        float s = oscillators[2].process();
+        oscSumL += s * oscillators[2].getLeftGain();
+        oscSumR += s * oscillators[2].getRightGain();
+    }
+    
+    // Process osc2 + detect phase wrap for hard sync
+    float prevOsc2Phase = oscillators[1].getPhase();
+    if (oscillators[1].isActive())
+    {
+        float s = oscillators[1].process();
+        oscSumL += s * oscillators[1].getLeftGain();
+        oscSumR += s * oscillators[1].getRightGain();
+    }
+    
+    // Hard sync: if osc2 phase wrapped, reset osc1
+    if (syncFM.osc2Sync && oscillators[1].isActive() && oscillators[0].isActive())
+    {
+        float curPhase = oscillators[1].getPhase();
+        if (curPhase < prevOsc2Phase)  // phase wrapped around
+            oscillators[0].resetPhase();
+    }
+    
+    // Process osc1 with FM applied
+    if (oscillators[0].isActive())
+    {
+        float fmAmt = syncFM.osc3FM ? fmSignal * syncFM.osc3FMAmount * 2.0f : 0.0f;
+        oscillators[0].setFM(fmAmt);
+        float s = oscillators[0].process() * pitchMult;
+        oscillators[0].setFM(0.0f);  // reset for next sample
+        oscSumL += s * oscillators[0].getLeftGain();
+        oscSumR += s * oscillators[0].getRightGain();
     }
     
     if (subOsc.isActive())
@@ -538,6 +578,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     addFloat(ParameterIDs::osc1PulseWidth, "Osc 1 Pulse Width", 0.01f, 0.99f, 0.5f);
     addChoice(ParameterIDs::osc1WavetableIndex, "Osc 1 Wavetable", {"Sine", "Triangle", "Saw", "Square", "Moog Saw", "PWM Sweep", "Brass", "Soft Square", "FM Bell", "Vocal", "Additive 1", "Organ", "Pluck", "Chip", "Noise WT"}, 0);
     addFloat(ParameterIDs::osc1Scan, "Osc 1 Scan", 0.0f, 1.0f, 0.0f);
+    addBool(ParameterIDs::osc2Sync, "Osc2 Sync→1", false);
+    addBool(ParameterIDs::osc3FM, "Osc3 FM→1", false);
+    addFloat(ParameterIDs::osc3FMAmount, "FM Amount", 0.0f, 1.0f, 0.0f);
     
     // Osc 2
     addChoice(ParameterIDs::osc2Wave, "Osc 2 Wave", oscWaves, 2);
@@ -725,6 +768,9 @@ void AnalogSynthAudioProcessor::updateSynthParams()
         synthParams.osc[i].wavetableIndex = static_cast<int>(getI(wt[i]));
         synthParams.osc[i].scan = getF(scan[i]);
     }
+    synthParams.osc2Sync = getI(ParameterIDs::osc2Sync) > 0;
+    synthParams.osc3FM = getI(ParameterIDs::osc3FM) > 0;
+    synthParams.osc3FMAmount = getF(ParameterIDs::osc3FMAmount);
     
     // Sub
     synthParams.sub.wave = static_cast<int>(getI(ParameterIDs::subWave));
