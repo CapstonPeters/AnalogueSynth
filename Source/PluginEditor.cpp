@@ -161,6 +161,55 @@ void AnalogSynthAudioProcessorEditor::WaveformPreview::paint (juce::Graphics& g)
 }
 
 //==============================================================================
+// EnvDisplay
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::EnvDisplay::setParams (float att, float dec, float sus, float rel)
+{
+    attack  = att;
+    decay   = dec;
+    sustain = sus;
+    release = rel;
+    repaint();
+}
+
+void AnalogSynthAudioProcessorEditor::EnvDisplay::paint (juce::Graphics& g)
+{
+    auto b = getLocalBounds().toFloat().reduced(2);
+
+    g.setColour (juce::Colour(0xFF111118));
+    g.fillRoundedRectangle (b, 4.0f);
+    g.setColour (juce::Colour(0xFF2A2A35));
+    g.drawRoundedRectangle (b, 4.0f, 0.5f);
+
+    juce::Path p;
+    float total = attack + decay + release + 0.02f;
+    if (total < 0.001f) return;
+
+    float sx = b.getX(), sy = b.getBottom();
+    p.startNewSubPath (sx, sy);
+
+    float x1 = sx + (attack / total) * b.getWidth();
+    p.lineTo (x1, b.getY() + 4);
+    float x2 = x1 + (decay / total) * b.getWidth();
+    float susY = b.getY() + (1.0f - sustain) * (b.getHeight() - 8);
+    p.lineTo (x2, susY);
+    float x3 = x2 + (0.02f / total) * b.getWidth();
+    p.lineTo (x3, susY);
+    float x4 = x3 + (release / total) * b.getWidth();
+    p.lineTo (x4, sy);
+
+    g.setColour (juce::Colour(0xFF00E5B0).withAlpha(0.85f));
+    g.strokePath (p, juce::PathStrokeType(1.8f));
+
+    auto dot = [&](float x, float y) {
+        g.setColour (juce::Colour(0xFF00E5B0).withAlpha(0.9f));
+        g.fillEllipse (x - 3, y - 3, 6, 6);
+    };
+    dot (x1, b.getY() + 4);
+    dot (x2, susY);
+}
+
+//==============================================================================
 // KnobGroup
 //==============================================================================
 void AnalogSynthAudioProcessorEditor::KnobGroup::setup (
@@ -213,7 +262,7 @@ static void setCombo (juce::ComboBox& cb, const juce::String& id,
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
     : AudioProcessorEditor (&p), proc (p), apvts (p.getAPVTS())
 {
-    setSize (1050, 760);
+    setSize (1050, 900);
     setResizable (true, true);
 }
 
@@ -299,6 +348,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     ampS.setup  ("ampSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.7f,       "SUS","",   this, laf.get());
     ampR.setup  ("ampRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "REL"," s", this, laf.get());
     ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get());
+    addAndMakeVisible (ampCurve);
 
     // Filt Env
     fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get());
@@ -307,6 +357,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     fenvR.setup  ("filtRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL"," s", this, laf.get());
     fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get());
     fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get());
+    addAndMakeVisible (fenvCurve);
 
     // LFO 1
     setCombo (lfo1Wave, "lfo1Wave", apvts, lfo1WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 0, this, laf.get());
@@ -439,9 +490,20 @@ void AnalogSynthAudioProcessorEditor::resized()
 
     // === RIGHT ===
     // ----- AMP ENV -----
-    auto ampB = R.removeFromTop (160);
+    auto ampB = R.removeFromTop (220);
     ampPanel.setBounds (ampB);
     auto ai = ampB.reduced (8, 30);
+
+    // ADSR curve display
+    auto curveA = ai.removeFromTop (62).reduced (4);
+    ampCurve.setBounds (curveA);
+    ampCurve.setParams (
+        apvts.getRawParameterValue("ampAttack")->load(),
+        apvts.getRawParameterValue("ampDecay")->load(),
+        apvts.getRawParameterValue("ampSustain")->load(),
+        apvts.getRawParameterValue("ampRelease")->load()
+    );
+
     int  akw = ai.getWidth() / 5;
     auto arow = ai.removeFromTop (56);
     ampA.slider.setBounds (arow.removeFromLeft (akw).reduced (2));
@@ -461,9 +523,20 @@ void AnalogSynthAudioProcessorEditor::resized()
     R.removeFromTop (4);
 
     // ----- FILT ENV -----
-    auto fenvB = R.removeFromTop (160);
+    auto fenvB = R.removeFromTop (220);
     fenvPanel.setBounds (fenvB);
     auto fei = fenvB.reduced (8, 30);
+
+    // ADSR curve display
+    auto fcurveA = fei.removeFromTop (62).reduced (4);
+    fenvCurve.setBounds (fcurveA);
+    fenvCurve.setParams (
+        apvts.getRawParameterValue("filtAttack")->load(),
+        apvts.getRawParameterValue("filtDecay")->load(),
+        apvts.getRawParameterValue("filtSustain")->load(),
+        apvts.getRawParameterValue("filtRelease")->load()
+    );
+
     int  few = fei.getWidth() / 5;
     auto ferow = fei.removeFromTop (56);
     fenvA.slider.setBounds (ferow.removeFromLeft (few).reduced (2));

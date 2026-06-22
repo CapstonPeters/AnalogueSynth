@@ -70,6 +70,18 @@ private:
         juce::String waveType = "Saw";
     };
 
+    class EnvDisplay : public juce::Component
+    {
+    public:
+        void paint (juce::Graphics&) override;
+        void setParams (float att, float dec, float sus, float rel);
+    private:
+        float attack  = 0.01f;
+        float decay   = 0.3f;
+        float sustain = 0.7f;
+        float release = 0.5f;
+    };
+
     // -----------------------------------------------------------------
     // State
     // -----------------------------------------------------------------
@@ -117,6 +129,7 @@ private:
     KnobGroup fenvA, fenvD, fenvS, fenvR, fenvAmt, fenvVel;
     SectionPanel ampPanel  {"AMP ENVELOPE",    juce::Colour(0xFF88BBFF)};
     SectionPanel fenvPanel {"FILTER ENVELOPE", juce::Colour(0xFFBB88FF)};
+    EnvDisplay ampCurve, fenvCurve;
 
     // -----------------------------------------------------------------
     // LFOs (× 2)
