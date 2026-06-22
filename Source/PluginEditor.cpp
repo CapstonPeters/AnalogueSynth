@@ -210,6 +210,73 @@ void AnalogSynthAudioProcessorEditor::EnvDisplay::paint (juce::Graphics& g)
 }
 
 //==============================================================================
+// FilterCurveDisplay
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::FilterCurveDisplay::setParams (int type, float cutoff, float reso)
+{
+    filterType  = type;
+    cutoffFreq  = cutoff;
+    resonance   = reso;
+    repaint();
+}
+
+void AnalogSynthAudioProcessorEditor::FilterCurveDisplay::paint (juce::Graphics& g)
+{
+    auto b = getLocalBounds().toFloat().reduced(2);
+
+    // dark background
+    g.setColour (juce::Colour(0xFF111118));
+    g.fillRoundedRectangle (b, 4.0f);
+    g.setColour (juce::Colour(0xFF2A2A35));
+    g.drawRoundedRectangle (b, 4.0f, 0.5f);
+
+    // grid lines
+    g.setColour (juce::Colour(0xFF1A1A26));
+    for (int i = 1; i < 4; ++i) {
+        float y = b.getY() + b.getHeight() * i / 4.0f;
+        g.drawLine (b.getX(), y, b.getRight(), y, 0.5f);
+    }
+    for (int i = 1; i < 4; ++i) {
+        float x = b.getX() + b.getWidth() * i / 4.0f;
+        g.drawLine (x, b.getY(), x, b.getBottom(), 0.5f);
+    }
+
+    // draw filter response curve
+    juce::Path p;
+    p.startNewSubPath (b.getX(), b.getBottom());
+
+    float normCutoff = std::log(std::max(20.0f, cutoffFreq) / 20.0f) / std::log(20000.0f / 20.0f);
+    float cx = b.getX() + normCutoff * b.getWidth();
+
+    for (float x = b.getX(); x <= b.getRight(); x += 1.0f)
+    {
+        float freq = 20.0f * std::pow(20000.0f / 20.0f, (x - b.getX()) / b.getWidth());
+        float ratio = freq / std::max(20.0f, cutoffFreq);
+        int poles = (filterType <= 1) ? 4 : (filterType <= 3) ? 2 : 1;
+        float gain = 1.0f / std::sqrt(1.0f + std::pow(ratio, 2.0f * poles));
+
+        // resonance peak
+        if (resonance > 0.01f && freq > cutoffFreq * 0.3f && freq < cutoffFreq * 3.0f) {
+            float dist = std::abs(freq - cutoffFreq) / cutoffFreq;
+            float q = resonance + 0.1f;
+            float peak = resonance * std::exp(-dist * dist * 30.0f / q);
+            gain += peak * 0.6f;
+        }
+
+        float db = juce::Decibels::gainToDecibels(gain, -48.0f);
+        float y = b.getBottom() - (db + 48.0f) / 48.0f * b.getHeight();
+        p.lineTo (x, juce::jlimit(b.getY(), b.getBottom(), y));
+    }
+
+    g.setColour (juce::Colour(0xFFFF7744).withAlpha(0.8f));
+    g.strokePath (p, juce::PathStrokeType(1.5f));
+
+    // cutoff marker
+    g.setColour (juce::Colour(0xFFFF7744).withAlpha(0.25f));
+    g.drawLine (cx, b.getY() + 4, cx, b.getBottom() - 4, 0.5f);
+}
+
+//==============================================================================
 // KnobGroup
 //==============================================================================
 void AnalogSynthAudioProcessorEditor::KnobGroup::setup (
@@ -262,7 +329,7 @@ static void setCombo (juce::ComboBox& cb, const juce::String& id,
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
     : AudioProcessorEditor (&p), proc (p), apvts (p.getAPVTS())
 {
-    setSize (1050, 900);
+    setSize (1050, 1000);
     setResizable (true, true);
 }
 
@@ -363,6 +430,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     filtDrv.setup ("filterDrive",      apvts, 0.0f, 1.0f, 0.01f, 0.0f,  "DRIVE",  "",     this, laf.get());
     filtKey.setup ("filterKeyTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f, "KEY",    "",     this, laf.get());
     filtVel.setup ("filterVelTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f, "VEL",    "",     this, laf.get());
+    addAndMakeVisible (filterCurve);
 
     // Amp Env
     ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get());
@@ -517,9 +585,19 @@ void AnalogSynthAudioProcessorEditor::resized()
     L.removeFromTop (4);
 
     // ----- FILTER -----
-    auto filtB = L.removeFromTop (150);
+    auto filtB = L.removeFromTop (240);
     filtPanel.setBounds (filtB);
     auto fi = filtB.reduced (8, 30);
+
+    // Filter response curve
+    auto fcv = fi.removeFromTop (74).reduced (4);
+    filterCurve.setBounds (fcv);
+    filterCurve.setParams (
+        filtType.getSelectedId() - 1,
+        apvts.getRawParameterValue("filterCutoff")->load(),
+        apvts.getRawParameterValue("filterResonance")->load()
+    );
+
     filtType.setBounds (fi.removeFromTop (kComboH).reduced (2));
     auto fkr = fi;
     int  fkw = fi.getWidth() / 5;

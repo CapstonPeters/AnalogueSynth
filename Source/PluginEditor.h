@@ -82,6 +82,17 @@ private:
         float release = 0.5f;
     };
 
+    class FilterCurveDisplay : public juce::Component
+    {
+    public:
+        void paint (juce::Graphics&) override;
+        void setParams (int type, float cutoff, float reso);
+    private:
+        int   filterType   = 0;
+        float cutoffFreq   = 1000.0f;
+        float resonance    = 0.0f;
+    };
+
     // -----------------------------------------------------------------
     // State
     // -----------------------------------------------------------------
@@ -120,6 +131,7 @@ private:
     KnobGroup filtCut, filtRes, filtDrv, filtKey, filtVel;
     juce::ComboBox    filtType;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> filtTypeA;
+    FilterCurveDisplay filterCurve;
     SectionPanel filtPanel {"FILTER", juce::Colour(0xFFFF7744)};
 
     // -----------------------------------------------------------------
