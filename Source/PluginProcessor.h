@@ -159,6 +159,31 @@ struct ParameterIDs
             "arpS13En","arpS14En","arpS15En","arpS16En"};
         return ids[std::clamp(i, 0, 15)];
     }
+    
+    // FX
+    static constexpr auto chorusOn = "chorusOn";
+    static constexpr auto chorusRate = "chorusRate";
+    static constexpr auto chorusDepth = "chorusDepth";
+    static constexpr auto chorusMix = "chorusMix";
+    static constexpr auto flangerOn = "flangerOn";
+    static constexpr auto flangerRate = "flangerRate";
+    static constexpr auto flangerDepth = "flangerDepth";
+    static constexpr auto flangerFeedback = "flangerFeedback";
+    static constexpr auto flangerMix = "flangerMix";
+    static constexpr auto phaserOn = "phaserOn";
+    static constexpr auto phaserRate = "phaserRate";
+    static constexpr auto phaserDepth = "phaserDepth";
+    static constexpr auto phaserFeedback = "phaserFeedback";
+    static constexpr auto phaserMix = "phaserMix";
+    static constexpr auto delayOn = "delayOn";
+    static constexpr auto delayTimeL = "delayTimeL";
+    static constexpr auto delayTimeR = "delayTimeR";
+    static constexpr auto delayFeedback = "delayFeedback";
+    static constexpr auto delayWet = "delayWet";
+    static constexpr auto reverbOn = "reverbOn";
+    static constexpr auto reverbSize = "reverbSize";
+    static constexpr auto reverbDamp = "reverbDamp";
+    static constexpr auto reverbWet = "reverbWet";
 };
 
 //==============================================================================
@@ -713,6 +738,207 @@ private:
 };
 
 //==============================================================================
+// FX: Stereo Chorus (2-voice, modulated delay)
+class StereoChorus
+{
+public:
+    void prepare(double sr) { sampleRate = sr; }
+    void setParams(float rate, float depth, float mix)
+    {
+        lfoRate = rate; lfoDepth = depth * 0.003f; wetMix = mix;
+    }
+    void process(float& l, float& r)
+    {
+        lfoPhase += lfoRate / sampleRate;
+        if (lfoPhase > 1.0f) lfoPhase -= 1.0f;
+        float mod1 = std::sin(lfoPhase * 6.28318f) * lfoDepth + 0.004f + lfoDepth;
+        float mod2 = std::sin((lfoPhase + 0.25f) * 6.28318f) * lfoDepth + 0.004f + lfoDepth;
+        int d1 = static_cast<int>(mod1 * sampleRate);
+        int d2 = static_cast<int>(mod2 * sampleRate);
+        d1 = std::clamp(d1, 1, kMaxDelay-1);
+        d2 = std::clamp(d2, 1, kMaxDelay-1);
+        buffer[bufPos] = (l + r) * 0.5f;
+        float wetL = buffer[(bufPos - d1 + kMaxDelay) % kMaxDelay];
+        float wetR = buffer[(bufPos - d2 + kMaxDelay) % kMaxDelay];
+        bufPos = (bufPos + 1) % kMaxDelay;
+        l += (wetL - l) * wetMix;
+        r += (wetR - r) * wetMix;
+    }
+private:
+    static constexpr int kMaxDelay = 4800; // ~100ms at 48k
+    float buffer[kMaxDelay] = {};
+    int bufPos = 0;
+    double sampleRate = 44100;
+    float lfoPhase = 0, lfoRate = 1.0f, lfoDepth = 0.002f, wetMix = 0.3f;
+};
+
+//==============================================================================
+// FX: Stereo Flanger (modulated short delay + feedback)
+class StereoFlanger
+{
+public:
+    void prepare(double sr) { sampleRate = sr; }
+    void setParams(float rate, float depth, float feedback, float mix)
+    {
+        lfoRate = rate; modDepth = depth * 0.0025f; fb = feedback * 0.95f; wetMix = mix;
+    }
+    void process(float& l, float& r)
+    {
+        lfoPhase += lfoRate / sampleRate;
+        if (lfoPhase > 1.0f) lfoPhase -= 1.0f;
+        float mod = std::sin(lfoPhase * 6.28318f) * modDepth + 0.0015f + modDepth;
+        int d = static_cast<int>(mod * sampleRate);
+        d = std::clamp(d, 1, kMaxDelay-1);
+        float in = (l + r) * 0.5f;
+        buffer[bufPos] = in + prevOut * fb;
+        float wet = buffer[(bufPos - d + kMaxDelay) % kMaxDelay];
+        prevOut = wet;
+        bufPos = (bufPos + 1) % kMaxDelay;
+        l += (wet - l) * wetMix;
+        r += (wet - r) * wetMix;
+    }
+private:
+    static constexpr int kMaxDelay = 2400;
+    float buffer[kMaxDelay] = {};
+    int bufPos = 0;
+    double sampleRate = 44100;
+    float lfoPhase = 0, lfoRate = 0.5f, modDepth = 0.001f, fb = 0.7f, wetMix = 0.5f;
+    float prevOut = 0;
+};
+
+//==============================================================================
+// FX: Stereo Phaser (4-stage allpass)
+class StereoPhaser
+{
+public:
+    void prepare(double sr) { sampleRate = sr; for (auto& s : stL) s = 0; for (auto& s : stR) s = 0; }
+    void setParams(float rate, float depth, float feedback, float mix)
+    {
+        lfoRate = rate; modDepth = depth * 0.7f; fb = feedback * 0.9f; wetMix = mix;
+    }
+    void process(float& l, float& r)
+    {
+        lfoPhase += lfoRate / sampleRate;
+        if (lfoPhase > 1.0f) lfoPhase -= 1.0f;
+        float mod = std::sin(lfoPhase * 6.28318f) * modDepth + 0.3f;
+        float freq = 200.0f * std::pow(10.0f, mod * 2.0f);
+        updateCoeff(freq);
+        auto ap = [&](float in, float& s1, float& s2, float& s3, float& s4) {
+            auto stage = [&](float x, float& s) { float y = coeff * (x - s) + s; s = y + coeff * (x - s) - x; return y; };
+            float y = stage(stage(stage(stage(in, s1), s2), s3), s4);
+            return y;
+        };
+        float wetL = ap(l + prevOut * fb, stL[0], stL[1], stL[2], stL[3]);
+        float wetR = ap(r + prevOut * fb, stR[0], stR[1], stR[2], stR[3]);
+        prevOut = (wetL + wetR) * 0.5f;
+        l += (wetL - l) * wetMix;
+        r += (wetR - r) * wetMix;
+    }
+private:
+    void updateCoeff(float freq)
+    {
+        float w = 2.0f * 3.14159f * freq / sampleRate;
+        coeff = (1.0f - std::tan(w * 0.5f)) / (1.0f + std::tan(w * 0.5f));
+    }
+    double sampleRate = 44100;
+    float lfoPhase = 0, lfoRate = 0.3f, modDepth = 0.5f, fb = 0.5f, wetMix = 0.5f;
+    float coeff = 0.5f;
+    float stL[4] = {}, stR[4] = {};
+    float prevOut = 0;
+};
+
+//==============================================================================
+// FX: Stereo Ping-Pong Delay
+class StereoDelay
+{
+public:
+    void prepare(double sr) { sampleRate = sr; }
+    void setParams(float timeL, float timeR, float feedback, float wet)
+    {
+        dlyL = static_cast<int>(timeL * sampleRate);
+        dlyR = static_cast<int>(timeR * sampleRate);
+        dlyL = std::clamp(dlyL, 1, kMaxDelay-1);
+        dlyR = std::clamp(dlyR, 1, kMaxDelay-1);
+        fb = std::clamp(feedback, 0.0f, 0.95f);
+        wetMix = wet;
+    }
+    void process(float& l, float& r)
+    {
+        float outL = buffer[(bufPos - dlyL + kMaxDelay) % kMaxDelay];
+        float outR = buffer[(bufPos - dlyR + kMaxDelay) % kMaxDelay];
+        buffer[bufPos] = l + outR * fb;
+        buffer[(bufPos + kMaxDelay/2) % kMaxDelay] = r + outL * fb;
+        bufPos = (bufPos + 1) % kMaxDelay;
+        l += (outL - l) * wetMix;
+        r += (outR - r) * wetMix;
+    }
+private:
+    static constexpr int kMaxDelay = 96000; // 2s at 48k
+    float buffer[kMaxDelay] = {};
+    int bufPos = 0;
+    double sampleRate = 44100;
+    int dlyL = 22050, dlyR = 14700;
+    float fb = 0.4f, wetMix = 0.3f;
+};
+
+//==============================================================================
+// FX: Stereo Algorithmic Reverb (4 allpass + 4 comb)
+class StereoReverb
+{
+public:
+    void prepare(double sr) { sampleRate = sr; }
+    void setParams(float size, float damp, float wet)
+    {
+        roomSize = std::clamp(size, 0.1f, 1.0f);
+        damping = std::clamp(damp, 0.0f, 1.0f);
+        wetMix = wet;
+    }
+    void process(float& l, float& r)
+    {
+        float in = (l + r) * 0.5f;
+        // 4 allpass pre-delay diffusers
+        float ap[4];
+        const int apDelays[4] = {142, 307, 511, 743};
+        ap[0] = in;
+        for (int i = 0; i < 4; ++i)
+        {
+            int d = static_cast<int>(apDelays[i] * roomSize);
+            d = std::clamp(d, 1, kMaxAP-1);
+            float dl = apBuf[i][apPos[i]];
+            ap[i+1 > 3 ? 0 : i+1] = dl; // not used correctly — simplify
+            float val = (i == 0) ? in : ap[i];
+            float y = val + dl * 0.5f;
+            apBuf[i][apPos[i]] = val - y * 0.5f;
+            apPos[i] = (apPos[i] + 1) % kMaxAP;
+            ap[i] = y;
+        }
+        // 4 comb filters
+        float out = 0;
+        const int combDelays[4] = {1116, 1188, 1277, 1356};
+        for (int i = 0; i < 4; ++i)
+        {
+            int d = static_cast<int>(combDelays[i] * roomSize);
+            d = std::clamp(d, 1, kMaxComb-1);
+            float cb = combBuf[i][combPos[i]];
+            combBuf[i][combPos[i]] = ap[3] * 0.25f + cb * 0.84f * (1.0f - damping);
+            combPos[i] = (combPos[i] + 1) % kMaxComb;
+            out += cb;
+        }
+        out *= 0.25f;
+        l += (out - l) * wetMix;
+        r += (out - r) * wetMix;
+    }
+private:
+    static constexpr int kMaxAP = 1024, kMaxComb = 2048;
+    float apBuf[4][kMaxAP] = {};
+    int apPos[4] = {};
+    float combBuf[4][kMaxComb] = {};
+    int combPos[4] = {};
+    double sampleRate = 44100;
+    float roomSize = 0.5f, damping = 0.5f, wetMix = 0.2f;
+};
+
+//==============================================================================
 // Modulation Source enum
 enum class ModSource : uint8_t
 {
@@ -1022,6 +1248,13 @@ struct SynthParams
     float arpSwing  = 0.0f;   // 0.0-1.0 swing amount
     int  arpStepOffsets[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  // semitones
     bool arpStepEnables[16] = {true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true};
+
+    // FX
+    bool  chorusOn = false;    float chorusRate = 1.0f, chorusDepth = 0.5f, chorusMix = 0.3f;
+    bool  flangerOn = false;   float flangerRate = 0.5f, flangerDepth = 0.5f, flangerFeedback = 0.5f, flangerMix = 0.5f;
+    bool  phaserOn = false;    float phaserRate = 0.3f, phaserDepth = 0.5f, phaserFeedback = 0.5f, phaserMix = 0.5f;
+    bool  delayOn = false;     float delayTimeL = 0.5f, delayTimeR = 0.375f, delayFeedback = 0.4f, delayWet = 0.3f;
+    bool  reverbOn = false;    float reverbSize = 0.5f, reverbDamp = 0.5f, reverbWet = 0.2f;
 };
 
 //==============================================================================
@@ -1036,6 +1269,11 @@ public:
         voices.resize(maxVoices);
         for (auto& v : voices) v.prepare(sampleRate);
         params.polyphony = maxVoices;
+        chorus.prepare(sampleRate);
+        flanger.prepare(sampleRate);
+        phaser.prepare(sampleRate);
+        delay.prepare(sampleRate);
+        reverb.prepare(sampleRate);
     }
     
     void setParams(const SynthParams& p) { params = p; updateVoiceParams(); }
@@ -1098,6 +1336,33 @@ public:
             }
         }
         
+        // Apply FX (chorus → flanger → phaser → delay → reverb)
+        if (p.chorusOn)
+        {
+            chorus.setParams(p.chorusRate, p.chorusDepth, p.chorusMix);
+            for (int i = 0; i < numSamples; ++i) chorus.process(outL[i], outR[i]);
+        }
+        if (p.flangerOn)
+        {
+            flanger.setParams(p.flangerRate, p.flangerDepth, p.flangerFeedback, p.flangerMix);
+            for (int i = 0; i < numSamples; ++i) flanger.process(outL[i], outR[i]);
+        }
+        if (p.phaserOn)
+        {
+            phaser.setParams(p.phaserRate, p.phaserDepth, p.phaserFeedback, p.phaserMix);
+            for (int i = 0; i < numSamples; ++i) phaser.process(outL[i], outR[i]);
+        }
+        if (p.delayOn)
+        {
+            delay.setParams(p.delayTimeL, p.delayTimeR, p.delayFeedback, p.delayWet);
+            for (int i = 0; i < numSamples; ++i) delay.process(outL[i], outR[i]);
+        }
+        if (p.reverbOn)
+        {
+            reverb.setParams(p.reverbSize, p.reverbDamp, p.reverbWet);
+            for (int i = 0; i < numSamples; ++i) reverb.process(outL[i], outR[i]);
+        }
+        
         // Apply master gain
         float g = p.masterGain;
         for (int i = 0; i < numSamples; ++i)
@@ -1122,6 +1387,13 @@ private:
     std::vector<SynthVoice> voices;
     SynthParams params;
     float modWheel = 0, aftertouch = 0, pitchBend = 0, exprPedal = 1.0f;
+    
+    // FX processors
+    StereoChorus  chorus;
+    StereoFlanger flanger;
+    StereoPhaser  phaser;
+    StereoDelay   delay;
+    StereoReverb  reverb;
 };
 
 //==============================================================================

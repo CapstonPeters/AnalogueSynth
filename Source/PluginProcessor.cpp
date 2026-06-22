@@ -662,6 +662,31 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
         addBool(ParameterIDs::arpStepEnable(i), ("Arp Step " + juce::String(i+1) + " Enable").toRawUTF8(), i < 8);
     // For now we'll skip detailed mod matrix params and use defaults
     
+    // FX
+    addBool(ParameterIDs::chorusOn, "Chorus On", false);
+    addFloat(ParameterIDs::chorusRate, "Chorus Rate", 0.1f, 5.0f, 1.0f, "Hz");
+    addFloat(ParameterIDs::chorusDepth, "Chorus Depth", 0.0f, 1.0f, 0.5f);
+    addFloat(ParameterIDs::chorusMix, "Chorus Mix", 0.0f, 1.0f, 0.3f);
+    addBool(ParameterIDs::flangerOn, "Flanger On", false);
+    addFloat(ParameterIDs::flangerRate, "Flanger Rate", 0.05f, 5.0f, 0.5f, "Hz");
+    addFloat(ParameterIDs::flangerDepth, "Flanger Depth", 0.0f, 1.0f, 0.5f);
+    addFloat(ParameterIDs::flangerFeedback, "Flanger Feedback", 0.0f, 1.0f, 0.5f);
+    addFloat(ParameterIDs::flangerMix, "Flanger Mix", 0.0f, 1.0f, 0.5f);
+    addBool(ParameterIDs::phaserOn, "Phaser On", false);
+    addFloat(ParameterIDs::phaserRate, "Phaser Rate", 0.05f, 5.0f, 0.3f, "Hz");
+    addFloat(ParameterIDs::phaserDepth, "Phaser Depth", 0.0f, 1.0f, 0.5f);
+    addFloat(ParameterIDs::phaserFeedback, "Phaser Feedback", 0.0f, 1.0f, 0.5f);
+    addFloat(ParameterIDs::phaserMix, "Phaser Mix", 0.0f, 1.0f, 0.5f);
+    addBool(ParameterIDs::delayOn, "Delay On", false);
+    addFloat(ParameterIDs::delayTimeL, "Delay Time L", 0.02f, 2.0f, 0.5f, "s");
+    addFloat(ParameterIDs::delayTimeR, "Delay Time R", 0.02f, 2.0f, 0.375f, "s");
+    addFloat(ParameterIDs::delayFeedback, "Delay Feedback", 0.0f, 1.0f, 0.4f);
+    addFloat(ParameterIDs::delayWet, "Delay Wet", 0.0f, 1.0f, 0.3f);
+    addBool(ParameterIDs::reverbOn, "Reverb On", false);
+    addFloat(ParameterIDs::reverbSize, "Reverb Size", 0.1f, 1.0f, 0.5f);
+    addFloat(ParameterIDs::reverbDamp, "Reverb Damp", 0.0f, 1.0f, 0.5f);
+    addFloat(ParameterIDs::reverbWet, "Reverb Wet", 0.0f, 1.0f, 0.2f);
+    
     return { params.begin(), params.end() };
 }
 
@@ -761,6 +786,31 @@ void AnalogSynthAudioProcessor::updateSynthParams()
         synthParams.arpStepOffsets[i] = static_cast<int>(getI(ParameterIDs::arpStepOffset(i)));
         synthParams.arpStepEnables[i] = getI(ParameterIDs::arpStepEnable(i)) > 0;
     }
+    
+    // FX
+    synthParams.chorusOn   = getI(ParameterIDs::chorusOn) > 0;
+    synthParams.chorusRate  = getF(ParameterIDs::chorusRate);
+    synthParams.chorusDepth = getF(ParameterIDs::chorusDepth);
+    synthParams.chorusMix   = getF(ParameterIDs::chorusMix);
+    synthParams.flangerOn   = getI(ParameterIDs::flangerOn) > 0;
+    synthParams.flangerRate  = getF(ParameterIDs::flangerRate);
+    synthParams.flangerDepth = getF(ParameterIDs::flangerDepth);
+    synthParams.flangerFeedback = getF(ParameterIDs::flangerFeedback);
+    synthParams.flangerMix   = getF(ParameterIDs::flangerMix);
+    synthParams.phaserOn    = getI(ParameterIDs::phaserOn) > 0;
+    synthParams.phaserRate   = getF(ParameterIDs::phaserRate);
+    synthParams.phaserDepth  = getF(ParameterIDs::phaserDepth);
+    synthParams.phaserFeedback = getF(ParameterIDs::phaserFeedback);
+    synthParams.phaserMix    = getF(ParameterIDs::phaserMix);
+    synthParams.delayOn     = getI(ParameterIDs::delayOn) > 0;
+    synthParams.delayTimeL   = getF(ParameterIDs::delayTimeL);
+    synthParams.delayTimeR   = getF(ParameterIDs::delayTimeR);
+    synthParams.delayFeedback = getF(ParameterIDs::delayFeedback);
+    synthParams.delayWet     = getF(ParameterIDs::delayWet);
+    synthParams.reverbOn    = getI(ParameterIDs::reverbOn) > 0;
+    synthParams.reverbSize   = getF(ParameterIDs::reverbSize);
+    synthParams.reverbDamp   = getF(ParameterIDs::reverbDamp);
+    synthParams.reverbWet    = getF(ParameterIDs::reverbWet);
     // Apply to synth
     synth.setParams(synthParams);
 }

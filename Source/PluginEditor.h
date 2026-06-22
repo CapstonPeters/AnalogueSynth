@@ -188,7 +188,29 @@ private:
     // -----------------------------------------------------------------
     KnobGroup dlyTime, dlyFb, dlyWet, revSize, revWet, revMix;
     SectionPanel fxPanel {"FX", juce::Colour(0xFF7C4DFF)};
-    juce::Label dlyLabel, revLabel;
+    
+    // Real FX controls (replacing placeholders)
+    // Chorus
+    KnobGroup chRate, chDepth, chMix;
+    juce::TextButton chToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> chToggleA;
+    // Flanger
+    KnobGroup flRate, flDepth, flFb, flMix;
+    juce::TextButton flToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> flToggleA;
+    // Phaser
+    KnobGroup phRate, phDepth, phFb, phMix;
+    juce::TextButton phToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> phToggleA;
+    // Delay
+    KnobGroup dlyTimeL, dlyTimeR, dlyFb2, dlyWet2;
+    juce::TextButton dlyToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> dlyToggleA;
+    // Reverb
+    KnobGroup revSize2, revDamp, revWet2;
+    juce::TextButton revToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> revToggleA;
+    juce::Label chLabel, flLabel, phLabel, dlyLabel2, revLabel2;
 
     // -----------------------------------------------------------------
     // Macro

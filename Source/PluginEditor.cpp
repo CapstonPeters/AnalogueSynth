@@ -587,23 +587,67 @@ void AnalogSynthAudioProcessorEditor::buildUI()
         k.label.setFont(juce::FontOptions(9.0f));
         k.label.setColour(juce::Label::textColourId, juce::Colour(0xFF777788));
     };
-    setupPh(dlyTime, "TIME", " ms", 0.3f, juce::Colour(0xFF7C4DFF));  setupPh(dlyFb, "FB", " %", 0.4f, juce::Colour(0xFF7C4DFF));
-    setupPh(dlyWet,  "WET",  " %",  0.2f, juce::Colour(0xFF7C4DFF));  setupPh(revSize, "SIZE", " %", 0.5f, juce::Colour(0xFF7C4DFF));
-    setupPh(revWet,  "WET",  " %",  0.1f, juce::Colour(0xFF7C4DFF));  setupPh(revMix,  "MIX",  " %", 0.0f, juce::Colour(0xFF7C4DFF));
-    setupPh(macro1,  "M1",   "",    0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro2,  "M2",   "",   0.0f, juce::Colour(0xFF42A5F5));
-    setupPh(macro3,  "M3",   "",    0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro4,  "M4",   "",   0.0f, juce::Colour(0xFF42A5F5));
+    // Real FX controls — each with toggle + knobs wired to APVTS
+    auto setupFXToggle = [&](juce::TextButton& btn, const char* paramID) {
+        addAndMakeVisible(btn);
+        btn.setClickingTogglesState(true);
+        btn.setLookAndFeel(laf.get());
+        btn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF7C4DFF));
+        btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF7C4DFF));
+        btn.setButtonText("OFF");
+        btn.onClick = [&btn]() {
+            btn.setButtonText(btn.getToggleState() ? "ON" : "OFF");
+        };
+    };
+    setupFXToggle(chToggle, "chorusOn");
+    chToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::chorusOn, chToggle);
+    chRate.setup("chorusRate", apvts, 0.1f, 5.0f, 0.01f, 1.0f, "RATE", "Hz", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    chDepth.setup("chorusDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    chMix.setup("chorusMix", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "MIX", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
 
+    setupFXToggle(flToggle, "flangerOn");
+    flToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::flangerOn, flToggle);
+    flRate.setup("flangerRate", apvts, 0.05f, 5.0f, 0.01f, 0.5f, "RATE", "Hz", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    flDepth.setup("flangerDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    flFb.setup("flangerFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "FB", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    flMix.setup("flangerMix", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "MIX", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+
+    setupFXToggle(phToggle, "phaserOn");
+    phToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::phaserOn, phToggle);
+    phRate.setup("phaserRate", apvts, 0.05f, 5.0f, 0.01f, 0.3f, "RATE", "Hz", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    phDepth.setup("phaserDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    phFb.setup("phaserFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "FB", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    phMix.setup("phaserMix", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "MIX", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+
+    setupFXToggle(dlyToggle, "delayOn");
+    dlyToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::delayOn, dlyToggle);
+    dlyTimeL.setup("delayTimeL", apvts, 0.02f, 2.0f, 0.01f, 0.5f, "TIME L", "s", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    dlyTimeR.setup("delayTimeR", apvts, 0.02f, 2.0f, 0.01f, 0.375f, "TIME R", "s", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    dlyFb2.setup("delayFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.4f, "FB", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    dlyWet2.setup("delayWet", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "WET", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+
+    setupFXToggle(revToggle, "reverbOn");
+    revToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::reverbOn, revToggle);
+    revSize2.setup("reverbSize", apvts, 0.1f, 1.0f, 0.01f, 0.5f, "SIZE", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    revDamp.setup("reverbDamp", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DAMP", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    revWet2.setup("reverbWet", apvts, 0.0f, 1.0f, 0.01f, 0.2f, "WET", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
 
     // FX sub-labels
-    addAndMakeVisible(dlyLabel); addAndMakeVisible(revLabel);
-    dlyLabel.setText("DELAY", juce::dontSendNotification);
-    dlyLabel.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-    dlyLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF7C4DFF));
-    dlyLabel.setJustificationType(juce::Justification::centred);
-    revLabel.setText("REVERB", juce::dontSendNotification);
-    revLabel.setFont(juce::FontOptions(9.0f, juce::Font::bold));
-    revLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF7C4DFF));
-    revLabel.setJustificationType(juce::Justification::centred);
+    auto setupFXLabel = [&](juce::Label& lbl, const juce::String& txt) {
+        addAndMakeVisible(lbl);
+        lbl.setText(txt, juce::dontSendNotification);
+        lbl.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+        lbl.setColour(juce::Label::textColourId, juce::Colour(0xFF7C4DFF));
+        lbl.setJustificationType(juce::Justification::centred);
+    };
+    setupFXLabel(chLabel, "CHORUS");  setupFXLabel(flLabel, "FLANGER");
+    setupFXLabel(phLabel, "PHASER");  setupFXLabel(dlyLabel2, "DELAY");
+    setupFXLabel(revLabel2, "REVERB");
+
+    // Macro placeholder knobs (for future use)
+    setupPh(macro1, "M1", "", 0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro2, "M2", "", 0.0f, juce::Colour(0xFF42A5F5));
+    setupPh(macro3, "M3", "", 0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro4, "M4", "", 0.0f, juce::Colour(0xFF42A5F5));
+
     // Mod matrix label
     addAndMakeVisible (modLabel);
     modLabel.setText ("8-slot Mod Matrix  —  right-click knobs to assign", juce::dontSendNotification);
@@ -617,7 +661,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     for (auto* child : kids)
         contentComp.addAndMakeVisible(*child);
     
-    contentComp.setSize(1050, 1300);
+    contentComp.setSize(1050, 1500);
     viewport.setViewedComponent(&contentComp, false);
     viewport.setScrollBarsShown(true, false);  // vertical scroll only
     addAndMakeVisible(viewport);
@@ -655,8 +699,8 @@ void AnalogSynthAudioProcessorEditor::resized()
     if (!built) { buildUI(); built = true; }
 
     viewport.setBounds(getLocalBounds().withTrimmedTop(48));  // leave room for title bar
-    contentComp.setSize(1050, 1300);
-
+    contentComp.setSize(1050, 1500);
+    
     auto b    = contentComp.getLocalBounds().reduced (10);
     auto hdr  = b.removeFromTop (48);
 
@@ -873,23 +917,31 @@ void AnalogSynthAudioProcessorEditor::resized()
     }
     // ----- FX -----
     R.removeFromTop(4);
-    auto fxB = R.removeFromTop(112);
+    auto fxB = R.removeFromTop(260);  // expanded for 5 FX rows
     fxPanel.setBounds(fxB);
-    auto fxi = fxB.reduced(8, 30);
-    // "DELAY" / "REVERB" labels
-    auto fxl = fxi.removeFromTop(16);
-    auto dlyLbl = fxl.removeFromLeft(fxl.getWidth() / 2).reduced(2, 0);
-    auto revLbl = fxl.reduced(2, 0);
-    dlyLabel.setBounds(dlyLbl);
-    revLabel.setBounds(revLbl);
-    auto fxr = fxi.removeFromTop(56);
-    int  fxw = fxr.getWidth() / 6;
-    dlyTime.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
-    dlyFb.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
-    dlyWet.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
-    revSize.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
-    revWet.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
-    revMix.slider.setBounds(fxr.reduced(1));
+    auto fxi = fxB.reduced(6, 26);
+    
+    auto layFXRow = [&](juce::Label& lbl, juce::TextButton& toggle, 
+                        KnobGroup** knobs, int numKnobs, juce::Rectangle<int> row)
+    {
+        lbl.setBounds(row.removeFromLeft(55).reduced(2, 4));
+        toggle.setBounds(row.removeFromRight(32).reduced(2));
+        int kw = row.getWidth() / numKnobs;
+        for (int i = 0; i < numKnobs; ++i)
+            knobs[i]->slider.setBounds(row.removeFromLeft(kw).reduced(1));
+    };
+    
+    KnobGroup* chKnobs[] = {&chRate, &chDepth, &chMix};
+    KnobGroup* flKnobs[] = {&flRate, &flDepth, &flFb, &flMix};
+    KnobGroup* phKnobs[] = {&phRate, &phDepth, &phFb, &phMix};
+    KnobGroup* dlyKnobs[] = {&dlyTimeL, &dlyTimeR, &dlyFb2, &dlyWet2};
+    KnobGroup* revKnobs[] = {&revSize2, &revDamp, &revWet2};
+    
+    layFXRow(chLabel, chToggle, chKnobs, 3, fxi.removeFromTop(44).reduced(0, 2));
+    layFXRow(flLabel, flToggle, flKnobs, 4, fxi.removeFromTop(44).reduced(0, 2));
+    layFXRow(phLabel, phToggle, phKnobs, 4, fxi.removeFromTop(44).reduced(0, 2));
+    layFXRow(dlyLabel2, dlyToggle, dlyKnobs, 4, fxi.removeFromTop(44).reduced(0, 2));
+    layFXRow(revLabel2, revToggle, revKnobs, 3, fxi.removeFromTop(44).reduced(0, 2));
 
     // ----- MACRO -----
     R.removeFromTop(4);
