@@ -350,6 +350,23 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get());
     addAndMakeVisible (ampCurve);
 
+    // Wire curve to knob changes (preserve APVTS attachment callback)
+    auto wireCurveKnob = [this](KnobGroup& a, KnobGroup& d, KnobGroup& s, KnobGroup& r, EnvDisplay& curve) {
+        auto updater = [&curve, &a, &d, &s, &r]() {
+            curve.setParams(a.slider.getValue(), d.slider.getValue(),
+                            s.slider.getValue(), r.slider.getValue());
+        };
+        auto chainA = a.slider.onValueChange;
+        a.slider.onValueChange = [chainA, updater]() { if (chainA) chainA(); updater(); };
+        auto chainD = d.slider.onValueChange;
+        d.slider.onValueChange = [chainD, updater]() { if (chainD) chainD(); updater(); };
+        auto chainS = s.slider.onValueChange;
+        s.slider.onValueChange = [chainS, updater]() { if (chainS) chainS(); updater(); };
+        auto chainR = r.slider.onValueChange;
+        r.slider.onValueChange = [chainR, updater]() { if (chainR) chainR(); updater(); };
+    };
+    wireCurveKnob(ampA, ampD, ampS, ampR, ampCurve);
+
     // Filt Env
     fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get());
     fenvD.setup  ("filtDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC"," s", this, laf.get());
@@ -358,6 +375,8 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get());
     fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get());
     addAndMakeVisible (fenvCurve);
+
+    wireCurveKnob(fenvA, fenvD, fenvS, fenvR, fenvCurve);
 
     // LFO 1
     setCombo (lfo1Wave, "lfo1Wave", apvts, lfo1WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 0, this, laf.get());
