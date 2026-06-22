@@ -331,7 +331,7 @@ static void setCombo (juce::ComboBox& cb, const juce::String& id,
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
     : AudioProcessorEditor (&p), proc (p), apvts (p.getAPVTS())
 {
-    setSize (1050, 1300);
+    setSize (1050, 780);
     setResizable (true, true);
 }
 
@@ -610,6 +610,18 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     modLabel.setJustificationType (juce::Justification::centred);
     modLabel.setColour (juce::Label::textColourId, juce::Colour (0xFF555566));
     modLabel.setFont (juce::FontOptions (10.0f));
+
+    // === Wrap all content in a scrollable Viewport ===
+    // Move all children from 'this' to contentComp
+    juce::Array<juce::Component*> kids = getChildren();
+    for (auto* child : kids)
+        contentComp.addAndMakeVisible(*child);
+    
+    contentComp.setSize(1050, 1300);
+    viewport.setViewedComponent(&contentComp, false);
+    viewport.setScrollBarsShown(true, false);  // vertical scroll only
+    addAndMakeVisible(viewport);
+    setSize(1050, 780);  // editor window fits on 1080p screen
 }
 
 //==============================================================================
@@ -642,7 +654,10 @@ void AnalogSynthAudioProcessorEditor::resized()
 {
     if (!built) { buildUI(); built = true; }
 
-    auto b    = getLocalBounds().reduced (10);
+    viewport.setBounds(getLocalBounds().withTrimmedTop(48));  // leave room for title bar
+    contentComp.setSize(1050, 1300);
+
+    auto b    = contentComp.getLocalBounds().reduced (10);
     auto hdr  = b.removeFromTop (48);
 
     // global knobs (top-right)

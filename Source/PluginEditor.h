@@ -106,6 +106,10 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     bool built = false;
     void buildUI();
+    
+    // Scroll support — content is taller than window, user scrolls vertically
+    juce::Viewport viewport;
+    juce::Component contentComp;
 
     // -----------------------------------------------------------------
     // Global (top bar)
