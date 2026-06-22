@@ -432,6 +432,21 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     filtVel.setup ("filterVelTrack",   apvts, -1.0f, 1.0f, 0.01f, 0.0f, "VEL",    "",     this, laf.get());
     addAndMakeVisible (filterCurve);
 
+    // Wire filter curve to knob/combo changes
+    {
+        auto updateFc = [this]() {
+            filterCurve.setParams(
+                filtType.getSelectedId() - 1,
+                filtCut.slider.getValue(), filtRes.slider.getValue());
+        };
+        auto chainFt = filtType.onChange;
+        filtType.onChange = [chainFt, updateFc]() { if (chainFt) chainFt(); updateFc(); };
+        auto chainFc = filtCut.slider.onValueChange;
+        filtCut.slider.onValueChange = [chainFc, updateFc]() { if (chainFc) chainFc(); updateFc(); };
+        auto chainFr = filtRes.slider.onValueChange;
+        filtRes.slider.onValueChange = [chainFr, updateFc]() { if (chainFr) chainFr(); updateFc(); };
+    }
+
     // Amp Env
     ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get());
     ampD.setup  ("ampDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "DEC"," s", this, laf.get());
