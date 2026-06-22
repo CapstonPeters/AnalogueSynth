@@ -329,7 +329,7 @@ static void setCombo (juce::ComboBox& cb, const juce::String& id,
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
     : AudioProcessorEditor (&p), proc (p), apvts (p.getAPVTS())
 {
-    setSize (1050, 1000);
+    setSize (1050, 1200);
     setResizable (true, true);
 }
 
@@ -348,6 +348,8 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     addAndMakeVisible (ampPanel);
     addAndMakeVisible (fenvPanel);
     addAndMakeVisible (lfoPanel);
+    addAndMakeVisible (fxPanel);
+    addAndMakeVisible (macroPanel);
     addAndMakeVisible (modPanel);
 
     // Global
@@ -496,6 +498,25 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get());
     lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get());
     lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get());
+
+    // FX + Macro placeholder knobs (visual only)
+    auto setupPh = [&](KnobGroup& k, const juce::String& txt, const juce::String& suf, float def) {
+        addAndMakeVisible(k.slider); addAndMakeVisible(k.label);
+        k.slider.setLookAndFeel(laf.get());
+        k.slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        k.slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 46, 18);
+        k.slider.setTextValueSuffix(suf);
+        k.slider.setRange(0.0f, 1.0f, 0.01f); k.slider.setValue(def);
+        k.label.setText(txt, juce::dontSendNotification);
+        k.label.setJustificationType(juce::Justification::centred);
+        k.label.setFont(juce::FontOptions(9.0f));
+        k.label.setColour(juce::Label::textColourId, juce::Colour(0xFF777788));
+    };
+    setupPh(dlyTime, "TIME", " ms", 0.3f);  setupPh(dlyFb, "FB", " %", 0.4f);
+    setupPh(dlyWet,  "WET",  " %",  0.2f);  setupPh(revSize, "SIZE", " %", 0.5f);
+    setupPh(revWet,  "WET",  " %",  0.1f);  setupPh(revMix,  "MIX",  " %", 0.0f);
+    setupPh(macro1,  "M1",   "",    0.0f);  setupPh(macro2,  "M2",   "",   0.0f);
+    setupPh(macro3,  "M3",   "",    0.0f);  setupPh(macro4,  "M4",   "",   0.0f);
 
     // Mod matrix label
     addAndMakeVisible (modLabel);
@@ -710,6 +731,31 @@ void AnalogSynthAudioProcessorEditor::resized()
     layLFO (lfo1Wave, lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade, li.removeFromLeft (lHalfW));
     li.removeFromLeft (4);
     layLFO (lfo2Wave, lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade, li);
+
+    // ----- FX -----
+    R.removeFromTop(4);
+    auto fxB = R.removeFromTop(100);
+    fxPanel.setBounds(fxB);
+    auto fxi = fxB.reduced(8, 30);
+    auto fxr = fxi.removeFromTop(56);
+    int  fxw = fxr.getWidth() / 6;
+    dlyTime.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
+    dlyFb.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
+    dlyWet.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
+    revSize.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
+    revWet.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
+    revMix.slider.setBounds(fxr.reduced(1));
+
+    // ----- MACRO -----
+    R.removeFromTop(4);
+    auto macB = R.removeFromTop(70);
+    macroPanel.setBounds(macB);
+    auto mac = macB.reduced(8, 30);
+    int  mkw = mac.getWidth() / 4;
+    macro1.slider.setBounds(mac.removeFromLeft(mkw).reduced(2));
+    macro2.slider.setBounds(mac.removeFromLeft(mkw).reduced(2));
+    macro3.slider.setBounds(mac.removeFromLeft(mkw).reduced(2));
+    macro4.slider.setBounds(mac.reduced(2));
 
     // ----- MOD MATRIX -----
     R.removeFromTop (4);

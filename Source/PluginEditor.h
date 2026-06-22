@@ -6,13 +6,14 @@
 class AnalogSynthAudioProcessor;
 
 /*
- * Design principles (Codex/Serum-inspired):
+ * Codex/Serum-inspired premium GUI
  *   - Dark uniform background (#0D0D14)
- *   - Rounded panel cards with subtle gradient fills
- *   - Accent-colored section headers (cyan=OSC, orange=Filter, amber=Env, green=LFO, violet=Mod)
- *   - 42px knobs with white dot indicators, arc fill from 7-o'clock to 5-o'clock
- *   - Compact combo boxes with drop-shadow arrows
- *   - 8px grid for spacing — everything aligns to it
+ *   - Rounded panel cards with accent-colored headers
+ *   - Animated ADSR envelope curve displays
+ *   - Filter response curve visualization
+ *   - Mini waveform previews per oscillator
+ *   - FX and Macro sections
+ *   - Rack-system modular partitioning
  */
 
 //==============================================================================
@@ -22,18 +23,18 @@ class SectionPanel;
 class WaveformPreview;
 
 //==============================================================================
-class AnalogSynthAudioProcessorEditor  : public juce::AudioProcessorEditor
+class AnalogSynthAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
     AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor&);
     ~AnalogSynthAudioProcessorEditor() override;
 
-    void paint (juce::Graphics&) override;
+    void paint  (juce::Graphics&) override;
     void resized() override;
 
 private:
     // -----------------------------------------------------------------
-    // Embedded classes (complete types needed for std::unique_ptr)
+    // Embedded classes
     // -----------------------------------------------------------------
 
     class SynthLookAndFeel;
@@ -51,6 +52,7 @@ private:
                     juce::Component* parent, juce::LookAndFeel* lf);
     };
 
+    // --- Rounded panel card with accent header ---
     class SectionPanel : public juce::Component
     {
     public:
@@ -61,6 +63,7 @@ private:
         juce::Colour  accent;
     };
 
+    // --- Mini oscilloscope per oscillator ---
     class WaveformPreview : public juce::Component
     {
     public:
@@ -70,6 +73,7 @@ private:
         juce::String waveType = "Saw";
     };
 
+    // --- Animated ADSR envelope curve ---
     class EnvDisplay : public juce::Component
     {
     public:
@@ -82,6 +86,7 @@ private:
         float release = 0.5f;
     };
 
+    // --- Filter response curve ---
     class FilterCurveDisplay : public juce::Component
     {
     public:
@@ -98,7 +103,6 @@ private:
     // -----------------------------------------------------------------
     AnalogSynthAudioProcessor& proc;
     juce::AudioProcessorValueTreeState& apvts;
-
     bool built = false;
     void buildUI();
 
@@ -122,20 +126,19 @@ private:
         osc1WTA, osc2WTA, osc3WTA;
 
     WaveformPreview wf1, wf2, wf3;
-
-    SectionPanel oscPanel {"OSCILLATORS",      juce::Colour(0xFF00E5B0)};
+    SectionPanel oscPanel {"OSCILLATORS", juce::Colour(0xFF00E5B0)};
 
     // -----------------------------------------------------------------
     // Filter
     // -----------------------------------------------------------------
     KnobGroup filtCut, filtRes, filtDrv, filtKey, filtVel;
-    juce::ComboBox    filtType;
+    juce::ComboBox filtType;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> filtTypeA;
     FilterCurveDisplay filterCurve;
     SectionPanel filtPanel {"FILTER", juce::Colour(0xFFFF7744)};
 
     // -----------------------------------------------------------------
-    // Envelopes (Amp + Filter)
+    // Envelopes
     // -----------------------------------------------------------------
     KnobGroup ampA, ampD, ampS, ampR, ampVel;
     KnobGroup fenvA, fenvD, fenvS, fenvR, fenvAmt, fenvVel;
@@ -144,13 +147,25 @@ private:
     EnvDisplay ampCurve, fenvCurve;
 
     // -----------------------------------------------------------------
-    // LFOs (× 2)
+    // LFOs
     // -----------------------------------------------------------------
     KnobGroup lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade;
     KnobGroup lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade;
     juce::ComboBox lfo1Wave, lfo2Wave;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> lfo1WaveA, lfo2WaveA;
     SectionPanel lfoPanel {"LFOs", juce::Colour(0xFFFFAA55)};
+
+    // -----------------------------------------------------------------
+    // FX
+    // -----------------------------------------------------------------
+    KnobGroup dlyTime, dlyFb, dlyWet, revSize, revWet, revMix;
+    SectionPanel fxPanel {"FX", juce::Colour(0xFF7C4DFF)};
+
+    // -----------------------------------------------------------------
+    // Macro
+    // -----------------------------------------------------------------
+    KnobGroup macro1, macro2, macro3, macro4;
+    SectionPanel macroPanel {"MACRO", juce::Colour(0xFF42A5F5)};
 
     // -----------------------------------------------------------------
     // Mod Matrix
@@ -165,8 +180,8 @@ private:
     static constexpr int kLabelH  = 14;
     static constexpr int kComboH  = 24;
     static constexpr int kGap     = 8;
-    static constexpr int kPanelPad = 32;   // top padding inside a panel (title bar)
-    static constexpr int kInset   = 4;     // inner padding
+    static constexpr int kPanelPad = 32;
+    static constexpr int kInset   = 4;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessorEditor)
 };
