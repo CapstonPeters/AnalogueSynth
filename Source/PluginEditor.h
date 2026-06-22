@@ -49,7 +49,8 @@ private:
         void setup (const juce::String& paramID, juce::AudioProcessorValueTreeState&,
                     float min, float max, float step, float def,
                     const juce::String& txt, const juce::String& suffix,
-                    juce::Component* parent, juce::LookAndFeel* lf);
+                    juce::Component* parent, juce::LookAndFeel* lf,
+                    juce::Colour accent = juce::Colour(0xFF00E5B0));
     };
 
     // --- Rounded panel card with accent header ---
@@ -160,6 +161,7 @@ private:
     // -----------------------------------------------------------------
     KnobGroup dlyTime, dlyFb, dlyWet, revSize, revWet, revMix;
     SectionPanel fxPanel {"FX", juce::Colour(0xFF7C4DFF)};
+    juce::Label dlyLabel, revLabel;
 
     // -----------------------------------------------------------------
     // Macro

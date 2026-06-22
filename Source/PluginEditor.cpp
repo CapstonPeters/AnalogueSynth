@@ -283,7 +283,8 @@ void AnalogSynthAudioProcessorEditor::KnobGroup::setup (
     const juce::String& id, juce::AudioProcessorValueTreeState& a,
     float min, float max, float step, float def,
     const juce::String& txt, const juce::String& suffix,
-    juce::Component* parent, juce::LookAndFeel* lf)
+    juce::Component* parent, juce::LookAndFeel* lf,
+    juce::Colour accent)
 {
     if (parent)
     {
@@ -292,6 +293,7 @@ void AnalogSynthAudioProcessorEditor::KnobGroup::setup (
     }
 
     slider.setLookAndFeel (lf);
+    slider.setColour (juce::Slider::rotarySliderFillColourId, accent);
     slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 46, 18);
     slider.setTextValueSuffix (suffix);
@@ -450,11 +452,11 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     }
 
     // Amp Env
-    ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get());
-    ampD.setup  ("ampDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "DEC"," s", this, laf.get());
-    ampS.setup  ("ampSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.7f,       "SUS","",   this, laf.get());
-    ampR.setup  ("ampRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "REL"," s", this, laf.get());
-    ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get());
+    ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get(), juce::Colour(0xFF88BBFF));
+    ampD.setup  ("ampDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "DEC"," s", this, laf.get(), juce::Colour(0xFF88BBFF));
+    ampS.setup  ("ampSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.7f,       "SUS","",   this, laf.get(), juce::Colour(0xFF88BBFF));
+    ampR.setup  ("ampRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "REL"," s", this, laf.get(), juce::Colour(0xFF88BBFF));
+    ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get(), juce::Colour(0xFF88BBFF));
     addAndMakeVisible (ampCurve);
 
     // Wire curve to knob changes (preserve APVTS attachment callback)
@@ -475,34 +477,35 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     wireCurveKnob(ampA, ampD, ampS, ampR, ampCurve);
 
     // Filt Env
-    fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get());
-    fenvD.setup  ("filtDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC"," s", this, laf.get());
-    fenvS.setup  ("filtSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "SUS","",   this, laf.get());
-    fenvR.setup  ("filtRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL"," s", this, laf.get());
-    fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get());
-    fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get());
+    fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get(), juce::Colour(0xFFBB88FF));
+    fenvD.setup  ("filtDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC"," s", this, laf.get(), juce::Colour(0xFFBB88FF));
+    fenvS.setup  ("filtSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "SUS","",   this, laf.get(), juce::Colour(0xFFBB88FF));
+    fenvR.setup  ("filtRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL"," s", this, laf.get(), juce::Colour(0xFFBB88FF));
+    fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get(), juce::Colour(0xFFBB88FF));
+    fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get(), juce::Colour(0xFFBB88FF));
     addAndMakeVisible (fenvCurve);
 
     wireCurveKnob(fenvA, fenvD, fenvS, fenvR, fenvCurve);
 
     // LFO 1
     setCombo (lfo1Wave, "lfo1Wave", apvts, lfo1WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 0, this, laf.get());
-    lfo1Rate.setup ("lfo1Rate",   apvts, 0.01f, 20.0f, 0.01f, 1.0f,  "RATE"," Hz",this, laf.get());
-    lfo1Amt.setup  ("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get());
-    lfo1Del.setup  ("lfo1Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get());
-    lfo1Fade.setup ("lfo1Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get());
+    lfo1Rate.setup ("lfo1Rate",   apvts, 0.01f, 20.0f, 0.01f, 1.0f,  "RATE"," Hz",this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo1Amt.setup  ("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo1Del.setup  ("lfo1Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo1Fade.setup ("lfo1Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(0xFFFFAA55));
 
     // LFO 2
     setCombo (lfo2Wave, "lfo2Wave", apvts, lfo2WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 1, this, laf.get());
-    lfo2Rate.setup ("lfo2Rate",   apvts, 0.01f, 20.0f, 0.01f, 5.0f,  "RATE"," Hz",this, laf.get());
-    lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get());
-    lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get());
-    lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get());
+    lfo2Rate.setup ("lfo2Rate",   apvts, 0.01f, 20.0f, 0.01f, 5.0f,  "RATE"," Hz",this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(0xFFFFAA55));
 
     // FX + Macro placeholder knobs (visual only)
-    auto setupPh = [&](KnobGroup& k, const juce::String& txt, const juce::String& suf, float def) {
+    auto setupPh = [&](KnobGroup& k, const juce::String& txt, const juce::String& suf, float def, juce::Colour col) {
         addAndMakeVisible(k.slider); addAndMakeVisible(k.label);
         k.slider.setLookAndFeel(laf.get());
+        k.slider.setColour(juce::Slider::rotarySliderFillColourId, col);
         k.slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         k.slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 46, 18);
         k.slider.setTextValueSuffix(suf);
@@ -512,12 +515,23 @@ void AnalogSynthAudioProcessorEditor::buildUI()
         k.label.setFont(juce::FontOptions(9.0f));
         k.label.setColour(juce::Label::textColourId, juce::Colour(0xFF777788));
     };
-    setupPh(dlyTime, "TIME", " ms", 0.3f);  setupPh(dlyFb, "FB", " %", 0.4f);
-    setupPh(dlyWet,  "WET",  " %",  0.2f);  setupPh(revSize, "SIZE", " %", 0.5f);
-    setupPh(revWet,  "WET",  " %",  0.1f);  setupPh(revMix,  "MIX",  " %", 0.0f);
-    setupPh(macro1,  "M1",   "",    0.0f);  setupPh(macro2,  "M2",   "",   0.0f);
-    setupPh(macro3,  "M3",   "",    0.0f);  setupPh(macro4,  "M4",   "",   0.0f);
+    setupPh(dlyTime, "TIME", " ms", 0.3f, juce::Colour(0xFF7C4DFF));  setupPh(dlyFb, "FB", " %", 0.4f, juce::Colour(0xFF7C4DFF));
+    setupPh(dlyWet,  "WET",  " %",  0.2f, juce::Colour(0xFF7C4DFF));  setupPh(revSize, "SIZE", " %", 0.5f, juce::Colour(0xFF7C4DFF));
+    setupPh(revWet,  "WET",  " %",  0.1f, juce::Colour(0xFF7C4DFF));  setupPh(revMix,  "MIX",  " %", 0.0f, juce::Colour(0xFF7C4DFF));
+    setupPh(macro1,  "M1",   "",    0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro2,  "M2",   "",   0.0f, juce::Colour(0xFF42A5F5));
+    setupPh(macro3,  "M3",   "",    0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro4,  "M4",   "",   0.0f, juce::Colour(0xFF42A5F5));
 
+
+    // FX sub-labels
+    addAndMakeVisible(dlyLabel); addAndMakeVisible(revLabel);
+    dlyLabel.setText("DELAY", juce::dontSendNotification);
+    dlyLabel.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+    dlyLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF7C4DFF));
+    dlyLabel.setJustificationType(juce::Justification::centred);
+    revLabel.setText("REVERB", juce::dontSendNotification);
+    revLabel.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+    revLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF7C4DFF));
+    revLabel.setJustificationType(juce::Justification::centred);
     // Mod matrix label
     addAndMakeVisible (modLabel);
     modLabel.setText ("8-slot Mod Matrix  —  right-click knobs to assign", juce::dontSendNotification);
@@ -734,9 +748,15 @@ void AnalogSynthAudioProcessorEditor::resized()
 
     // ----- FX -----
     R.removeFromTop(4);
-    auto fxB = R.removeFromTop(100);
+    auto fxB = R.removeFromTop(112);
     fxPanel.setBounds(fxB);
     auto fxi = fxB.reduced(8, 30);
+    // "DELAY" / "REVERB" labels
+    auto fxl = fxi.removeFromTop(16);
+    auto dlyLbl = fxl.removeFromLeft(fxl.getWidth() / 2).reduced(2, 0);
+    auto revLbl = fxl.reduced(2, 0);
+    dlyLabel.setBounds(dlyLbl);
+    revLabel.setBounds(revLbl);
     auto fxr = fxi.removeFromTop(56);
     int  fxw = fxr.getWidth() / 6;
     dlyTime.slider.setBounds(fxr.removeFromLeft(fxw).reduced(1));
