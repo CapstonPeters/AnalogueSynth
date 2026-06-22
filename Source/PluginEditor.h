@@ -157,6 +157,16 @@ private:
     SectionPanel lfoPanel {"LFOs", juce::Colour(0xFFFFAA55)};
 
     // -----------------------------------------------------------------
+    // Arpeggiator
+    // -----------------------------------------------------------------
+    juce::ComboBox arpMode, arpRate;
+    KnobGroup arpOctaves, arpGate;
+    juce::TextButton arpToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> arpModeA, arpRateA;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> arpToggleA;
+    SectionPanel arpPanel {"ARPEGGIATOR", juce::Colour(0xFF26A69A)};
+
+    // -----------------------------------------------------------------
     // FX
     // -----------------------------------------------------------------
     KnobGroup dlyTime, dlyFb, dlyWet, revSize, revWet, revMix;

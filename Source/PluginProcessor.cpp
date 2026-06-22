@@ -209,6 +209,125 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         updateSynthParams();
     }
     
+    // === Arpeggiator ===
+    bool arpOn = synthParams.arpEnabled;
+    if (arpOn)
+    {
+        // Collect held notes from MIDI
+        for (const auto metadata : midiMessages)
+        {
+            auto msg = metadata.getMessage();
+            if (msg.isNoteOn())
+            {
+                int n = msg.getNoteNumber();
+                if (std::find(arpNotes.begin(), arpNotes.end(), n) == arpNotes.end())
+                    arpNotes.push_back(n);
+                std::sort(arpNotes.begin(), arpNotes.end());
+            }
+            else if (msg.isNoteOff())
+            {
+                auto it = std::find(arpNotes.begin(), arpNotes.end(), msg.getNoteNumber());
+                if (it != arpNotes.end()) arpNotes.erase(it);
+            }
+        }
+        midiMessages.clear();
+
+        // Determine rate in Hz (at 120 BPM reference)
+        static const float rateTable[] = { 2.0f, 4.0f, 8.0f, 6.0f, 12.0f, 2.67f };
+        int rateIdx = std::clamp(static_cast<int>(synthParams.arpRate), 0, 5);
+        arpRateHz = rateTable[rateIdx];
+
+        double sr = getSampleRate();
+        if (sr <= 0) sr = 44100.0;
+
+        if (!arpNotes.empty())
+        {
+            int numNotes = static_cast<int>(arpNotes.size());
+            int octaves  = std::clamp(synthParams.arpOctaves, 1, 4);
+            int totalSteps = numNotes * octaves;
+            if (totalSteps > 0)
+            {
+                // Advance step counter
+                double stepSamples = sr / arpRateHz;
+                arpTimer += numSamples;
+                while (arpTimer >= stepSamples && totalSteps > 0)
+                {
+                    arpTimer -= stepSamples;
+
+                    // Note-off previous arp note
+                    if (arpNoteOut >= 0)
+                        synth.noteOff(arpNoteOut);
+
+                    // Calculate next note based on mode
+                    int baseIdx = arpStep % numNotes;
+                    int oct = arpStep / numNotes;
+                    if (oct >= octaves) { arpStep = 0; oct = 0; baseIdx = 0; }
+
+                    int noteNum = arpNotes[baseIdx] + oct * 12;
+
+                    // Apply mode
+                    int mode = std::clamp(synthParams.arpMode, 0, 3);
+                    if (mode == 0) // Up
+                    {
+                        arpStep++;
+                    }
+                    else if (mode == 1) // Down
+                    {
+                        arpStep--;
+                        if (arpStep < 0) arpStep = totalSteps - 1;
+                    }
+                    else if (mode == 2) // Up-Down
+                    {
+                        arpStep += arpDir;
+                        if (arpStep >= totalSteps - 1) arpDir = -1;
+                        else if (arpStep <= 0) arpDir = 1;
+                    }
+                    else // Random
+                    {
+                        arpStep = rand() % totalSteps;
+                    }
+                    arpStep = (arpStep % totalSteps + totalSteps) % totalSteps;
+
+                    // Trigger note
+                    arpNoteOut = noteNum;
+                    synth.noteOn(arpNoteOut, 0.8f);
+
+                    // Schedule note-off after gate fraction
+                    double gateSamples = stepSamples * std::clamp(synthParams.arpGate, 0.1f, 1.0f);
+                    if (gateSamples > 0)
+                    {
+                        // Store for later note-off (handled in gate timer below)
+                        arpNoteHeld = true;
+                    }
+                }
+
+                // Gate handling: release note when gate time expires
+                if (arpNoteHeld && arpNoteOut >= 0)
+                {
+                    double gateSamples = sr / arpRateHz * std::clamp(synthParams.arpGate, 0.1f, 1.0f);
+                    static double gateTimer = 0;
+                    gateTimer += numSamples;
+                    if (gateTimer >= gateSamples)
+                    {
+                        gateTimer -= gateSamples;
+                        synth.noteOff(arpNoteOut);
+                        arpNoteHeld = false;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // No notes held - stop arp
+            if (arpNoteOut >= 0)
+            {
+                synth.noteOff(arpNoteOut);
+                arpNoteOut = -1;
+            }
+            arpStep = 0;
+            arpTimer = 0;
+        }
+    }
     // Process MIDI
     for (const auto metadata : midiMessages)
     {
@@ -430,6 +549,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout AnalogSynthAudioProcessor::c
     
     // Mod Matrix (8 slots - simplified as individual params for now)
     // In a full implementation, these would be structured differently
+
+    // Arpeggiator
+    addBool(ParameterIDs::arpEnabled, "Arp Enabled", false);
+    addChoice(ParameterIDs::arpMode, "Arp Mode", {"Up", "Down", "Up-Down", "Random"}, 0);
+    addChoice(ParameterIDs::arpRate, "Arp Rate", {"1/4", "1/8", "1/16", "1/8T", "1/16T", "1/8D"}, 1);
+    addInt(ParameterIDs::arpOctaves, "Arp Octaves", 1, 4, 1);
+    addFloat(ParameterIDs::arpGate, "Arp Gate", 0.1f, 1.0f, 0.8f);
     // For now we'll skip detailed mod matrix params and use defaults
     
     return { params.begin(), params.end() };
@@ -517,6 +643,13 @@ void AnalogSynthAudioProcessor::updateSynthParams()
     synthParams.lfo2Delay = getF(ParameterIDs::lfo2Delay);
     synthParams.lfo2Fade = getF(ParameterIDs::lfo2Fade);
     
+
+    // Arpeggiator
+    synthParams.arpEnabled = getI(ParameterIDs::arpEnabled) > 0;
+    synthParams.arpMode    = static_cast<int>(getI(ParameterIDs::arpMode));
+    synthParams.arpRate    = getF(ParameterIDs::arpRate);
+    synthParams.arpOctaves = static_cast<int>(getI(ParameterIDs::arpOctaves));
+    synthParams.arpGate    = getF(ParameterIDs::arpGate);
     // Apply to synth
     synth.setParams(synthParams);
 }

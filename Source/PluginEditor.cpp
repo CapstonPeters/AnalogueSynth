@@ -331,7 +331,7 @@ static void setCombo (juce::ComboBox& cb, const juce::String& id,
 AnalogSynthAudioProcessorEditor::AnalogSynthAudioProcessorEditor (AnalogSynthAudioProcessor& p)
     : AudioProcessorEditor (&p), proc (p), apvts (p.getAPVTS())
 {
-    setSize (1050, 1200);
+    setSize (1050, 1300);
     setResizable (true, true);
 }
 
@@ -349,6 +349,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     addAndMakeVisible (filtPanel);
     addAndMakeVisible (ampPanel);
     addAndMakeVisible (fenvPanel);
+    addAndMakeVisible (arpPanel);
     addAndMakeVisible (lfoPanel);
     addAndMakeVisible (fxPanel);
     addAndMakeVisible (macroPanel);
@@ -500,6 +501,23 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(0xFFFFAA55));
     lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(0xFFFFAA55));
     lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(0xFFFFAA55));
+
+    // Arpeggiator
+    addAndMakeVisible(arpToggle);
+    arpToggle.setButtonText("ON");
+    arpToggle.setLookAndFeel(laf.get());
+    arpToggle.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF26A69A));
+    arpToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF26A69A));
+    arpToggle.onClick = [this]() {
+        bool on = arpToggle.getButtonText() == "OFF";
+        arpToggle.setButtonText(on ? "ON" : "OFF");
+        arpToggle.setColour(juce::TextButton::buttonColourId, on ? juce::Colour(0xFF26A69A) : juce::Colour(0xFF3A3A4A));
+    };
+    arpToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::arpEnabled, arpToggle);
+    setCombo(arpMode, "arpMode", apvts, arpModeA, {"Up", "Down", "Up-Down", "Random"}, 0, this, laf.get());
+    setCombo(arpRate, "arpRate", apvts, arpRateA, {"1/4", "1/8", "1/16", "1/8T", "1/16T", "1/8D"}, 1, this, laf.get());
+    arpOctaves.setup("arpOctaves", apvts, 1.0f, 4.0f, 1.0f, 1.0f, "OCTAVES", "", this, laf.get());
+    arpGate.setup("arpGate", apvts, 0.1f, 1.0f, 0.01f, 0.8f, "GATE", "", this, laf.get());
 
     // FX + Macro placeholder knobs (visual only)
     auto setupPh = [&](KnobGroup& k, const juce::String& txt, const juce::String& suf, float def, juce::Colour col) {
@@ -746,6 +764,20 @@ void AnalogSynthAudioProcessorEditor::resized()
     li.removeFromLeft (4);
     layLFO (lfo2Wave, lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade, li);
 
+
+    // ----- ARPEGGIATOR -----
+    R.removeFromTop(4);
+    auto arpB = R.removeFromTop(100);
+    arpPanel.setBounds(arpB);
+    auto ari = arpB.reduced(8, 30);
+    arpToggle.setBounds(ari.removeFromTop(22).removeFromLeft(50).reduced(2));
+    auto arcr = ari.removeFromTop(kComboH);
+    arpMode.setBounds(arcr.removeFromLeft(arcr.getWidth() / 2 - 2).reduced(1));
+    arpRate.setBounds(arcr.removeFromLeft(arcr.getWidth() / 2).reduced(1));
+    auto arkr = ari.removeFromTop(56);
+    int akw2 = arkr.getWidth() / 2;
+    arpOctaves.slider.setBounds(arkr.removeFromLeft(akw2).reduced(1));
+    arpGate.slider.setBounds(arkr.reduced(1));
     // ----- FX -----
     R.removeFromTop(4);
     auto fxB = R.removeFromTop(112);

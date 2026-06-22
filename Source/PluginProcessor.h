@@ -135,6 +135,13 @@ struct ParameterIDs
     static constexpr auto modMatrixSource = "modMatrixSource";
     static constexpr auto modMatrixDest = "modMatrixDest";
     static constexpr auto modMatrixAmount = "modMatrixAmount";
+
+    // Arpeggiator
+    static constexpr auto arpEnabled = "arpEnabled";
+    static constexpr auto arpMode = "arpMode";
+    static constexpr auto arpRate = "arpRate";
+    static constexpr auto arpOctaves = "arpOctaves";
+    static constexpr auto arpGate = "arpGate";
 };
 
 //==============================================================================
@@ -987,6 +994,13 @@ struct SynthParams
     
     // Mod Matrix
     ModMatrix modMatrix;
+
+    // Arpeggiator
+    bool arpEnabled = false;
+    int  arpMode    = 0;      // 0=Up, 1=Down, 2=Up-Down, 3=Random
+    float arpRate   = 1.0f;   // 0=1/4, 1=1/8, 2=1/16, 3=1/8T, 4=1/16T
+    int  arpOctaves = 1;      // 1-4
+    float arpGate   = 0.8f;   // 0.1-1.0
 };
 
 //==============================================================================
@@ -1176,6 +1190,15 @@ private:
     TestToneOsc testToneOsc;
     std::atomic<bool> testToneActive{false};
     int testToneWaveType = 0;
+
+    // Arpeggiator state
+    std::vector<int> arpNotes;         // held notes (MIDI note numbers)
+    int    arpStep     = 0;            // current step index
+    double arpTimer    = 0.0;          // per-sample accumulator
+    int    arpNoteOut  = -1;           // currently sounding arp note
+    double arpRateHz   = 8.0;          // computed rate in Hz
+    int    arpDir      = 1;            // +1 = up, -1 = down
+    bool   arpNoteHeld = false;        // whether a note is currently gated on
     
     // Full synth
     SynthEngine synth;
