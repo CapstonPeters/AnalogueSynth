@@ -301,6 +301,14 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc1Scn.setup ("osc1Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
     addAndMakeVisible (wf1);
 
+    // Wire waveform preview to wave type changes (chain ComboBoxAttachment callback)
+    {
+        auto chainW1 = osc1Wave.onChange;
+        osc1Wave.onChange = [chainW1, this]() { if (chainW1) chainW1(); wf1.setType(osc1Wave.getText()); };
+        auto chainW1t = osc1WT.onChange;
+        osc1WT.onChange = [chainW1t, this]() { if (chainW1t) chainW1t(); wf1.setType(osc1WT.getText()); };
+    }
+
     // --- Osc 2
     setCombo (osc2Wave,  "osc2Wave",  apvts, osc2WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
     setCombo (osc2WT,    "osc2WavetableIndex", apvts, osc2WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
@@ -314,6 +322,13 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc2Scn.setup ("osc2Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
     addAndMakeVisible (wf2);
 
+    {
+        auto chainW2 = osc2Wave.onChange;
+        osc2Wave.onChange = [chainW2, this]() { if (chainW2) chainW2(); wf2.setType(osc2Wave.getText()); };
+        auto chainW2t = osc2WT.onChange;
+        osc2WT.onChange = [chainW2t, this]() { if (chainW2t) chainW2t(); wf2.setType(osc2WT.getText()); };
+    }
+
     // --- Osc 3
     setCombo (osc3Wave,  "osc3Wave",  apvts, osc3WaveA, {"Sine","Triangle","Saw","Square","Noise","Wavetable"}, 2, this, laf.get());
     setCombo (osc3WT,    "osc3WavetableIndex", apvts, osc3WTA, {"Sine","Triangle","Saw","Square","Moog Saw","PWM Sweep","Brass","Soft Square","FM Bell","Vocal","Additive 1","Organ","Pluck","Chip","Noise WT"}, 0, this, laf.get());
@@ -326,6 +341,13 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc3PW.setup  ("osc3PulseWidth",    apvts, 0.01f,0.99f,0.01f,0.5f,   "PW",     "%",    this, laf.get());
     osc3Scn.setup ("osc3Scan",         apvts, 0.0f, 1.0f, 0.01f,0.0f,   "SCAN",   "",     this, laf.get());
     addAndMakeVisible (wf3);
+
+    {
+        auto chainW3 = osc3Wave.onChange;
+        osc3Wave.onChange = [chainW3, this]() { if (chainW3) chainW3(); wf3.setType(osc3Wave.getText()); };
+        auto chainW3t = osc3WT.onChange;
+        osc3WT.onChange = [chainW3t, this]() { if (chainW3t) chainW3t(); wf3.setType(osc3WT.getText()); };
+    }
 
     // Sub + Noise
     setCombo (subWave,   "subWave",  apvts, subWaveA,  {"Sine","Square"}, 0, this, laf.get());
