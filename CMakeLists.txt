@@ -77,7 +77,6 @@ target_link_libraries(AnalogSynth PRIVATE
 # Linux: link curl for juce_core URL handling
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(AnalogSynth PRIVATE
-        juce::pkgconfig_JUCE_BROWSER_LINUX_DEPS
         juce::pkgconfig_JUCE_CURL_LINUX_DEPS
     )
 endif()
@@ -92,4 +91,6 @@ target_compile_definitions(AnalogSynth PRIVATE
     JucePlugin_WantsMidiOutput=0
     VST3_NUM_MIDI_INPUTS=1
     VST3_NUM_MIDI_OUTPUTS=0
+    # Disable web browser (not needed for VST3 plugin, avoids GTK dependency)
+    JUCE_WEB_BROWSER=0
 )

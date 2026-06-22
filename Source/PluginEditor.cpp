@@ -507,13 +507,13 @@ void AnalogSynthAudioProcessorEditor::buildUI()
 
     // Arpeggiator
     addAndMakeVisible(arpToggle);
-    arpToggle.setButtonText("ON");
+    arpToggle.setClickingTogglesState(true);
     arpToggle.setLookAndFeel(laf.get());
     arpToggle.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF26A69A));
     arpToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF26A69A));
     arpToggle.onClick = [this]() {
-        bool on = arpToggle.getButtonText() == "OFF";
-        arpToggle.setButtonText(on ? "ON" : "OFF");
+        bool on = arpToggle.getToggleState();
+        arpToggle.setButtonText(on ? "OFF" : "ON");
         arpToggle.setColour(juce::TextButton::buttonColourId, on ? juce::Colour(0xFF26A69A) : juce::Colour(0xFF3A3A4A));
     };
     arpToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::arpEnabled, arpToggle);

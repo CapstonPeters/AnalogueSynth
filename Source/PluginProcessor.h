@@ -234,7 +234,7 @@ private:
             tables[13][i] = std::floor(chipSaw * 15.0 + 0.5) / 15.0;
             // 14: Noise WT (filtered noise — pseudo-random but deterministic)
             {
-                uint32_t seed = static_cast<uint32_t>(i * 1664525 + 1013904223);
+                uint32_t seed = static_cast<uint32_t>(static_cast<uint64_t>(i) * 1664525 + 1013904223);
                 seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
                 float raw = seed * 2.3283064e-10f * 2.0f - 1.0f;
                 // Simple 1-pole lowpass with previous sample (since this is a static table)
@@ -1199,6 +1199,7 @@ private:
     double arpRateHz   = 8.0;          // computed rate in Hz
     int    arpDir      = 1;            // +1 = up, -1 = down
     bool   arpNoteHeld = false;        // whether a note is currently gated on
+    double arpGateTimer = 0.0;         // per-sample gate accumulator
     
     // Full synth
     SynthEngine synth;

@@ -210,7 +210,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     }
     
     // === Arpeggiator ===
-    bool arpOn = synthParams.arpEnabled;
+    bool arpOn = apvts.getRawParameterValue(ParameterIDs::arpEnabled)->load() > 0.0f;
     if (arpOn)
     {
         // Collect held notes from MIDI
@@ -232,9 +232,15 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         }
         midiMessages.clear();
 
+        // Read arp params fresh from APVTS (no 64-block delay)
+        int    arpModeVal    = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpMode)->load());
+        int    arpRateIdx    = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpRate)->load());
+        int    arpOctavesVal = static_cast<int>(apvts.getRawParameterValue(ParameterIDs::arpOctaves)->load());
+        float  arpGateVal    = apvts.getRawParameterValue(ParameterIDs::arpGate)->load();
+
         // Determine rate in Hz (at 120 BPM reference)
         static const float rateTable[] = { 2.0f, 4.0f, 8.0f, 6.0f, 12.0f, 2.67f };
-        int rateIdx = std::clamp(static_cast<int>(synthParams.arpRate), 0, 5);
+        int rateIdx = std::clamp(arpRateIdx, 0, 5);
         arpRateHz = rateTable[rateIdx];
 
         double sr = getSampleRate();
@@ -243,7 +249,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         if (!arpNotes.empty())
         {
             int numNotes = static_cast<int>(arpNotes.size());
-            int octaves  = std::clamp(synthParams.arpOctaves, 1, 4);
+            int octaves  = std::clamp(arpOctavesVal, 1, 4);
             int totalSteps = numNotes * octaves;
             if (totalSteps > 0)
             {
@@ -258,6 +264,9 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                     if (arpNoteOut >= 0)
                         synth.noteOff(arpNoteOut);
 
+                    // Reset gate timer for new note
+                    arpGateTimer = 0.0;
+
                     // Calculate next note based on mode
                     int baseIdx = arpStep % numNotes;
                     int oct = arpStep / numNotes;
@@ -266,7 +275,7 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                     int noteNum = arpNotes[baseIdx] + oct * 12;
 
                     // Apply mode
-                    int mode = std::clamp(synthParams.arpMode, 0, 3);
+                    int mode = std::clamp(arpModeVal, 0, 3);
                     if (mode == 0) // Up
                     {
                         arpStep++;
@@ -291,25 +300,17 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                     // Trigger note
                     arpNoteOut = noteNum;
                     synth.noteOn(arpNoteOut, 0.8f);
-
-                    // Schedule note-off after gate fraction
-                    double gateSamples = stepSamples * std::clamp(synthParams.arpGate, 0.1f, 1.0f);
-                    if (gateSamples > 0)
-                    {
-                        // Store for later note-off (handled in gate timer below)
-                        arpNoteHeld = true;
-                    }
+                    arpNoteHeld = true;
                 }
 
                 // Gate handling: release note when gate time expires
                 if (arpNoteHeld && arpNoteOut >= 0)
                 {
-                    double gateSamples = sr / arpRateHz * std::clamp(synthParams.arpGate, 0.1f, 1.0f);
-                    static double gateTimer = 0;
-                    gateTimer += numSamples;
-                    if (gateTimer >= gateSamples)
+                    double gateSamples = sr / arpRateHz * std::clamp(arpGateVal, 0.1f, 1.0f);
+                    arpGateTimer += numSamples;
+                    if (arpGateTimer >= gateSamples)
                     {
-                        gateTimer -= gateSamples;
+                        arpGateTimer -= gateSamples;
                         synth.noteOff(arpNoteOut);
                         arpNoteHeld = false;
                     }
@@ -326,6 +327,8 @@ void AnalogSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
             }
             arpStep = 0;
             arpTimer = 0;
+            arpNoteHeld = false;
+            arpGateTimer = 0.0;
         }
     }
     // Process MIDI
