@@ -2,11 +2,12 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-// SynthLookAndFeel — Surge XT-inspired premium dark theme v3
-//   • Metallic knobs with coloured indicator arc + centre readout
-//   • Tick marks around 300° sweep (like analog hardware)
-//   • Deep layered panels with shadow borders
-//   • Richer colour saturation
+// SynthLookAndFeel — premium dark theme v3
+//   • 48px rotary knobs with glow arc, indicator line, tick marks
+//   • Surge-style metallic bezel + dark inner face
+//   • Cyan/amber-gold/purple accent system
+//   • Monospace numeric readouts
+//   • Pill toggle buttons
 //==============================================================================
 class AnalogSynthAudioProcessorEditor::SynthLookAndFeel : public juce::LookAndFeel_V4
 {
@@ -31,83 +32,69 @@ public:
         setColour (juce::TextButton::textColourOnId,           juce::Colours::black);
     }
 
-    // ── Surge-style rotary knob ─────────────────────────────────────
-    //   • Metallic outer bezel
-    //   • Dark inner face
-    //   • Coloured indicator line + glow arc
-    //   • Full-circumference tick marks
-    //   • Centre value readout
+    // ── Rotary knob — Surge-style bezel + arc + indicator line ──────
     void drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h,
                            float pos, float start, float end, juce::Slider& s) override
     {
-        const auto bounds = juce::Rectangle<float>((float)x, (float)y, (float)w, (float)h);
-        const auto centre = bounds.getCentre();
-        const auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
-        const auto accent  = s.findColour(juce::Slider::rotarySliderFillColourId);
-        const float angle  = start + pos * (end - start);
+        const auto r      = juce::Rectangle<float>((float)x, (float)y, (float)w, (float)h).reduced(5);
+        const auto rad    = juce::jmin(r.getWidth(), r.getHeight()) / 2.0f;
+        const auto c      = r.getCentre();
+        const auto accent = s.findColour(juce::Slider::rotarySliderFillColourId);
+        const float angle = start + pos * (end - start);
 
-        // --- Outer metallic bezel ring ---
-        g.setColour(juce::Colour(0xFF2A2A3E));
-        g.fillEllipse(centre.x - radius + 1, centre.y - radius + 1, (radius - 1) * 2, (radius - 1) * 2);
-        // Highlight on bezel
-        juce::ColourGradient bezelGrad(
-            juce::Colour(0xFF3A3A50), centre.x - radius, centre.y - radius,
-            juce::Colour(0xFF1A1A2A), centre.x + radius, centre.y + radius, false);
-        g.setGradientFill(bezelGrad);
-        g.fillEllipse(centre.x - radius + 2, centre.y - radius + 2, (radius - 2) * 2, (radius - 2) * 2);
-        g.setColour(juce::Colour(0xFF111120));
-        g.drawEllipse(centre.x - radius + 1.5f, centre.y - radius + 1.5f, (radius - 1.5f) * 2, (radius - 1.5f) * 2, 0.8f);
+        // Metallic bezel ring
+        juce::ColourGradient bezel(
+            juce::Colour(0xFF353548), c.x - rad, c.y - rad,
+            juce::Colour(0xFF181828), c.x + rad, c.y + rad, false);
+        g.setGradientFill(bezel);
+        g.fillEllipse(c.x - rad, c.y - rad, rad * 2, rad * 2);
+        g.setColour(juce::Colour(0xFF101020));
+        g.drawEllipse(c.x - rad + 0.5f, c.y - rad + 0.5f, rad * 2 - 1, rad * 2 - 1, 0.7f);
 
-        // --- Inner dark face ---
-        const float innerR = radius - 4.5f;
+        // Dark inner face
+        const float innerR = rad - 3.5f;
         g.setColour(juce::Colour(0xFF0A0A14));
-        g.fillEllipse(centre.x - innerR, centre.y - innerR, innerR * 2, innerR * 2);
-        g.setColour(juce::Colour(0xFF1A1A28));
-        g.drawEllipse(centre.x - innerR, centre.y - innerR, innerR * 2, innerR * 2, 0.6f);
+        g.fillEllipse(c.x - innerR, c.y - innerR, innerR * 2, innerR * 2);
+        g.setColour(juce::Colour(0xFF1C1C2C));
+        g.drawEllipse(c.x - innerR, c.y - innerR, innerR * 2, innerR * 2, 0.5f);
 
-        // --- Tick marks around full circumference (like a pot) ---
-        const int numTicks = 31;  // 30 steps
-        const float tickInner = innerR - 2.5f;
-        const float tickOuterShort = innerR - 0.5f;
-        const float tickOuterLong  = innerR + 1.5f;
-        for (int i = 0; i < numTicks; ++i)
+        // Tick marks (25 marks around sweep, every 5th major)
+        for (int i = 0; i <= 25; ++i)
         {
-            const float ta = start + (end - start) * i / (numTicks - 1);
+            const float ta = start + (end - start) * i / 25.0f;
             const bool major = (i % 5 == 0);
-            const float tOuter = major ? tickOuterLong : tickOuterShort;
-            const auto p1 = centre.getPointOnCircumference(tickInner, ta);
-            const auto p2 = centre.getPointOnCircumference(tOuter, ta);
-            g.setColour(juce::Colour(0xFF3A3A4A).withAlpha(major ? 0.7f : 0.3f));
+            const auto p1 = c.getPointOnCircumference(innerR - 2.5f, ta);
+            const auto p2 = c.getPointOnCircumference(innerR - (major ? 0.0f : 1.5f), ta);
+            g.setColour(juce::Colour(0xFF383850).withAlpha(major ? 0.7f : 0.3f));
             g.drawLine(p1.x, p1.y, p2.x, p2.y, major ? 1.0f : 0.5f);
         }
 
-        // --- Glow arc behind indicator ---
+        // Glow arc behind value
         juce::Path glowArc;
-        glowArc.addCentredArc(centre.x, centre.y, innerR - 4, innerR - 4, 0, start, angle, true);
-        g.setColour(accent.withAlpha(0.12f));
-        g.strokePath(glowArc, juce::PathStrokeType(6.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        glowArc.addCentredArc(c.x, c.y, innerR - 3, innerR - 3, 0, start, angle, true);
+        g.setColour(accent.withAlpha(0.10f));
+        g.strokePath(glowArc, juce::PathStrokeType(5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-        // --- Coloured value arc ---
+        // Value arc
         juce::Path valueArc;
-        valueArc.addCentredArc(centre.x, centre.y, innerR - 4, innerR - 4, 0, start, angle, true);
-        g.setColour(accent.withAlpha(0.85f));
-        g.strokePath(valueArc, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        valueArc.addCentredArc(c.x, c.y, innerR - 3, innerR - 3, 0, start, angle, true);
+        g.setColour(accent.withAlpha(0.88f));
+        g.strokePath(valueArc, juce::PathStrokeType(1.8f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-        // --- Indicator line (from centre outward) ---
-        const auto indOuter = centre.getPointOnCircumference(innerR - 5, angle);
-        const auto indInner = centre.getPointOnCircumference(innerR * 0.3f, angle);
+        // Indicator line (centre → edge)
+        const auto indOuter = c.getPointOnCircumference(innerR - 4, angle);
+        const auto indInner = c.getPointOnCircumference(innerR * 0.25f, angle);
         g.setColour(juce::Colours::white.withAlpha(0.9f));
-        g.drawLine(indInner.x, indInner.y, indOuter.x, indOuter.y, 1.5f);
+        g.drawLine(indInner.x, indInner.y, indOuter.x, indOuter.y, 1.3f);
 
-        // --- Centre cap ---
+        // Centre cap dot
         g.setColour(juce::Colour(0xFF0A0A14));
-        g.fillEllipse(centre.x - innerR * 0.28f, centre.y - innerR * 0.28f, innerR * 0.56f, innerR * 0.56f);
-        // Tiny highlight on cap
+        g.fillEllipse(c.x - 3, c.y - 3, 6, 6);
         g.setColour(juce::Colour(0xFF1E1E30));
-        g.drawEllipse(centre.x - innerR * 0.28f, centre.y - innerR * 0.28f, innerR * 0.56f, innerR * 0.56f, 0.5f);
+        g.drawEllipse(c.x - 3, c.y - 3, 6, 6, 0.4f);
     }
 
-    // ── Text box — compact monospace below the knob ─────────────────
+    // ── Text box ────────────────────────────────────────────────────
     juce::Label* createSliderTextBox(juce::Slider& s) override
     {
         auto* l = LookAndFeel_V4::createSliderTextBox(s);
@@ -128,7 +115,6 @@ public:
         g.fillRoundedRectangle(r.toFloat(), 4.0f);
         g.setColour(findColour(juce::ComboBox::outlineColourId));
         g.drawRoundedRectangle(r.toFloat().reduced(0.5f), 4.0f, 0.8f);
-        // inner highlight
         g.setColour(juce::Colour(0xFF202035).withAlpha(0.4f));
         g.drawRoundedRectangle(r.toFloat().reduced(1.5f), 3.0f, 0.5f);
 
@@ -138,7 +124,7 @@ public:
         g.fillPath(arrow, juce::AffineTransform::translation((float)(w - 15), (float)((h - 3) / 2)));
     }
 
-    // ── Text button — small pill toggle ─────────────────────────────
+    // ── Text button — pill toggle ───────────────────────────────────
     void drawButtonBackground(juce::Graphics& g, juce::Button& btn,
                               const juce::Colour& bg, bool isOver, bool isDown) override
     {
