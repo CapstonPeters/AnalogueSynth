@@ -30,20 +30,20 @@ class AnalogSynthAudioProcessor;
 // Design tokens
 namespace ColourID
 {
-    // Functional
+    // Functional — richer saturation for premium feel
     inline constexpr auto kSignalPath  = 0xFF00E5B0;  // cyan — osc, filter, amp
-    inline constexpr auto kModulation  = 0xFFFFAA55;  // amber — lfo, env, mod matrix
-    inline constexpr auto kEffects     = 0xFF7C4DFF;  // purple — fx
-    inline constexpr auto kArp         = 0xFF26A69A;  // teal — arp/seq (secondary signal)
+    inline constexpr auto kModulation  = 0xFFFF9900;  // vibrant amber-gold — lfo, env, mod
+    inline constexpr auto kEffects     = 0xFF8844FF;  // rich violet — fx
+    inline constexpr auto kArp         = 0xFF26C6B0;  // bright teal — arp/seq
 
     // Neutrals
-    inline constexpr auto kBg          = 0xFF080810;  // deepest background
-    inline constexpr auto kSurface     = 0xFF12121E;  // panel card base
-    inline constexpr auto kPanel       = 0xFF1A1A2E;  // elevated surface
+    inline constexpr auto kBg          = 0xFF060610;  // deepest background
+    inline constexpr auto kSurface     = 0xFF0E0E1C;  // panel card base
+    inline constexpr auto kPanel       = 0xFF161628;  // elevated surface
     inline constexpr auto kBorder      = 0xFF2A2A3E;  // subtle borders
-    inline constexpr auto kTextPrimary = 0xFFCCCCDD;
-    inline constexpr auto kTextMuted   = 0xFF66667A;
-    inline constexpr auto kTextDim     = 0xFF44445A;
+    inline constexpr auto kTextPrimary = 0xFFD0D0E0;
+    inline constexpr auto kTextMuted   = 0xFF707088;
+    inline constexpr auto kTextDim     = 0xFF48485A;
 }
 
 //==============================================================================
@@ -277,7 +277,7 @@ private:
     static constexpr int kLabelH  = 14;
     static constexpr int kComboH  = 24;
     static constexpr int kGap     = 10;
-    static constexpr int kPanelPad = 36;  // increased from 32 for gradient headers
+    static constexpr int kPanelPad = 38;  // 32px header + 6px breathing room
     static constexpr int kInset   = 6;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessorEditor)
