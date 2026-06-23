@@ -2,86 +2,126 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-// SynthLookAndFeel — premium dark theme
+// SynthLookAndFeel — premium dark theme v2
+//   • 48px rotary knobs with glow arc, tick marks, centre value dot
+//   • Cyan/amber/purple accent system
+//   • Monospace numeric readouts
 //==============================================================================
 class AnalogSynthAudioProcessorEditor::SynthLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
     SynthLookAndFeel()
     {
-        setColour (juce::Slider::rotarySliderFillColourId,    juce::Colour(0xFF00E5B0));
-        setColour (juce::Slider::rotarySliderOutlineColourId,  juce::Colour(0xFF2A2A3A));
+        setColour (juce::Slider::rotarySliderFillColourId,    juce::Colour(ColourID::kSignalPath));
+        setColour (juce::Slider::rotarySliderOutlineColourId,  juce::Colour(ColourID::kBorder));
         setColour (juce::Slider::thumbColourId,                juce::Colours::white);
-        setColour (juce::ComboBox::backgroundColourId,         juce::Colour(0xFF1E1E2E));
-        setColour (juce::ComboBox::outlineColourId,            juce::Colour(0xFF333344));
-        setColour (juce::ComboBox::textColourId,               juce::Colours::white);
-        setColour (juce::ComboBox::arrowColourId,              juce::Colour(0xFF888888));
-        setColour (juce::Label::textColourId,                  juce::Colour(0xFF9999AA));
-        setColour (juce::PopupMenu::backgroundColourId,        juce::Colour(0xFF1E1E2E));
-        setColour (juce::PopupMenu::textColourId,              juce::Colour(0xFFCCCCCC));
-        setColour (juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xFF00E5B0).withAlpha(0.3f));
+        setColour (juce::ComboBox::backgroundColourId,         juce::Colour(ColourID::kPanel));
+        setColour (juce::ComboBox::outlineColourId,            juce::Colour(ColourID::kBorder));
+        setColour (juce::ComboBox::textColourId,               juce::Colour(ColourID::kTextPrimary));
+        setColour (juce::ComboBox::arrowColourId,              juce::Colour(ColourID::kTextMuted));
+        setColour (juce::Label::textColourId,                  juce::Colour(ColourID::kTextMuted));
+        setColour (juce::PopupMenu::backgroundColourId,        juce::Colour(ColourID::kPanel));
+        setColour (juce::PopupMenu::textColourId,              juce::Colour(ColourID::kTextPrimary));
+        setColour (juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(ColourID::kSignalPath).withAlpha(0.25f));
         setColour (juce::PopupMenu::highlightedTextColourId,   juce::Colours::white);
+        setColour (juce::TextButton::buttonColourId,           juce::Colour(ColourID::kPanel));
+        setColour (juce::TextButton::buttonOnColourId,         juce::Colour(ColourID::kSignalPath));
+        setColour (juce::TextButton::textColourOffId,          juce::Colour(ColourID::kTextDim));
+        setColour (juce::TextButton::textColourOnId,           juce::Colours::white);
     }
 
+    // ── Rotary knob with glow arc + tick marks ──────────────────────
     void drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h,
                            float pos, float start, float end, juce::Slider& s) override
     {
-        auto r   = juce::Rectangle<float>((float)x, (float)y, (float)w, (float)h).reduced (3);
-        auto rad = juce::jmin (r.getWidth(), r.getHeight()) / 2.0f;
+        auto r   = juce::Rectangle<float>((float)x, (float)y, (float)w, (float)h).reduced(4);
+        auto rad = juce::jmin(r.getWidth(), r.getHeight()) / 2.0f;
         auto c   = r.getCentre();
+        auto accent = s.findColour(juce::Slider::rotarySliderFillColourId);
 
-        // outer ring
-        g.setColour (juce::Colour (0xFF2A2A3A));
-        g.drawEllipse (r, 1.5f);
+        // outer ring — subtle
+        g.setColour(juce::Colour(ColourID::kBorder));
+        g.drawEllipse(r, 1.2f);
 
-        // filled arc
+        // tick marks (12 small dashes around the arc)
+        float arcRange = end - start;
+        for (int i = 0; i <= 12; ++i)
+        {
+            float tickAngle = start + (arcRange * i / 12.0f);
+            auto inner = c.getPointOnCircumference(rad - 9, tickAngle);
+            auto outer = c.getPointOnCircumference(rad - 5, tickAngle);
+            g.setColour(juce::Colour(ColourID::kBorder).withAlpha(i % 3 == 0 ? 0.6f : 0.25f));
+            g.drawLine(inner.x, inner.y, outer.x, outer.y, 1.0f);
+        }
+
+        // filled arc — with subtle outer glow
         auto angle = start + pos * (end - start);
         juce::Path arc;
-        arc.addCentredArc (c.x, c.y, rad - 5, rad - 5, 0, start, angle, true);
-        g.setColour (findColour (juce::Slider::rotarySliderFillColourId).withAlpha (0.85f));
-        g.strokePath (arc, juce::PathStrokeType (3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        arc.addCentredArc(c.x, c.y, rad - 6, rad - 6, 0, start, angle, true);
+        // glow layer
+        g.setColour(accent.withAlpha(0.15f));
+        g.strokePath(arc, juce::PathStrokeType(5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        // main arc
+        g.setColour(accent.withAlpha(0.9f));
+        g.strokePath(arc, juce::PathStrokeType(2.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-        // indicator dot
-        auto dotPos = c.getPointOnCircumference (rad - 10, angle);
-        g.setColour (juce::Colours::white);
-        g.fillEllipse (dotPos.x - 3, dotPos.y - 3, 6, 6);
+        // indicator dot — bright white
+        auto dotPos = c.getPointOnCircumference(rad - 11, angle);
+        g.setColour(juce::Colours::white.withAlpha(0.95f));
+        g.fillEllipse(dotPos.x - 3.5f, dotPos.y - 3.5f, 7, 7);
 
-        // centre dot
-        g.setColour (juce::Colour (0xFF15151E));
-        g.fillEllipse (c.x - 5, c.y - 5, 10, 10);
-        g.setColour (juce::Colour (0xFF2A2A3A));
-        g.drawEllipse (c.x - 5, c.y - 5, 10, 10, 1.0f);
+        // centre — dark with subtle ring
+        g.setColour(juce::Colour(ColourID::kSurface));
+        g.fillEllipse(c.x - 5.5f, c.y - 5.5f, 11, 11);
+        g.setColour(juce::Colour(ColourID::kBorder));
+        g.drawEllipse(c.x - 5.5f, c.y - 5.5f, 11, 11, 0.8f);
     }
 
-    juce::Label* createSliderTextBox (juce::Slider& s) override
+    // ── Text box — monospace, compact ───────────────────────────────
+    juce::Label* createSliderTextBox(juce::Slider& s) override
     {
-        auto* l = LookAndFeel_V4::createSliderTextBox (s);
-        l->setColour (juce::Label::outlineColourId,      juce::Colours::transparentBlack);
-        l->setColour (juce::Label::backgroundColourId,   juce::Colour (0x401A1A2A));
-        l->setColour (juce::Label::textColourId,         juce::Colour (0xFFBBBBCC));
-        l->setFont (juce::FontOptions (10.0f));
-        l->setJustificationType (juce::Justification::centred);
+        auto* l = LookAndFeel_V4::createSliderTextBox(s);
+        l->setColour(juce::Label::outlineColourId,    juce::Colours::transparentBlack);
+        l->setColour(juce::Label::backgroundColourId, juce::Colour(ColourID::kSurface).withAlpha(0.6f));
+        l->setColour(juce::Label::textColourId,       juce::Colour(ColourID::kTextPrimary));
+        l->setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 10.0f, juce::Font::plain));
+        l->setJustificationType(juce::Justification::centred);
         return l;
     }
 
-    void drawComboBox (juce::Graphics& g, int w, int h, bool,
+    // ── Combo box — rounded, clean ─────────────────────────────────
+    void drawComboBox(juce::Graphics& g, int w, int h, bool,
                        int bx, int by, int bw, int bh, juce::ComboBox& box) override
     {
-        auto r = juce::Rectangle<int> (0, 0, w, h);
-        g.setColour (findColour (juce::ComboBox::backgroundColourId));
-        g.fillRoundedRectangle (r.toFloat(), 4.0f);
-        g.setColour (findColour (juce::ComboBox::outlineColourId));
-        g.drawRoundedRectangle (r.toFloat().reduced (0.5f), 4.0f, 1.0f);
+        auto r = juce::Rectangle<int>(0, 0, w, h);
+        g.setColour(findColour(juce::ComboBox::backgroundColourId));
+        g.fillRoundedRectangle(r.toFloat(), 5.0f);
+        g.setColour(findColour(juce::ComboBox::outlineColourId));
+        g.drawRoundedRectangle(r.toFloat().reduced(0.5f), 5.0f, 1.0f);
 
+        // dropdown arrow
         juce::Path arrow;
-        arrow.addTriangle (0, 0, 8, 0, 4, 5);
-        g.setColour (findColour (juce::ComboBox::arrowColourId));
-        g.fillPath (arrow, juce::AffineTransform::translation ((float)(w - 16), (float)((h - 4) / 2)));
+        arrow.addTriangle(0, 0, 7, 0, 3.5f, 4);
+        g.setColour(findColour(juce::ComboBox::arrowColourId));
+        g.fillPath(arrow, juce::AffineTransform::translation((float)(w - 15), (float)((h - 3) / 2)));
+    }
+
+    // ── Text button — rounded pill shape ────────────────────────────
+    void drawButtonBackground(juce::Graphics& g, juce::Button& btn,
+                              const juce::Colour& bg, bool isOver, bool isDown) override
+    {
+        auto b = btn.getLocalBounds().toFloat().reduced(1);
+        auto col = btn.getToggleState() ? btn.findColour(juce::TextButton::buttonOnColourId)
+                                        : btn.findColour(juce::TextButton::buttonColourId);
+        if (isOver) col = col.brighter(0.15f);
+        if (isDown) col = col.darker(0.1f);
+        g.setColour(col);
+        g.fillRoundedRectangle(b, 6.0f);
     }
 };
 
 //==============================================================================
-// SectionPanel
+// SectionPanel — premium gradient card with glow header
 //==============================================================================
 AnalogSynthAudioProcessorEditor::SectionPanel::SectionPanel (const juce::String& t, juce::Colour a)
     : title (t), accent (a) {}
@@ -89,25 +129,40 @@ AnalogSynthAudioProcessorEditor::SectionPanel::SectionPanel (const juce::String&
 void AnalogSynthAudioProcessorEditor::SectionPanel::paint (juce::Graphics& g)
 {
     auto b = getLocalBounds().toFloat();
-    // gradient card
-    juce::ColourGradient grad (juce::Colour (0xFF1C1C2C), b.getTopLeft(),
-                               juce::Colour (0xFF161622), b.getBottomLeft(), false);
-    g.setGradientFill (grad);
-    g.fillRoundedRectangle (b.reduced (1), 8.0f);
 
-    // accent bar at top
-    g.setColour (accent.withAlpha (0.6f));
-    g.fillRoundedRectangle (b.removeFromTop (2).reduced (4, 0), 8.0f);
+    // Deep card background with subtle top-to-bottom gradient
+    juce::ColourGradient bgGrad(
+        juce::Colour(ColourID::kPanel),
+        b.getTopLeft(),
+        juce::Colour(ColourID::kSurface),
+        b.getBottomLeft(), false);
+    g.setGradientFill(bgGrad);
+    g.fillRoundedRectangle(b.reduced(1), 8.0f);
 
-    // title
-    g.setColour (accent);
-    g.setFont (juce::FontOptions (12.0f, juce::Font::bold));
-    g.drawText (title, getLocalBounds().removeFromTop (26).reduced (10, 0),
-                juce::Justification::centredLeft);
+    // ── Header bar with gradient ──────────────────────
+    auto hdr = b.removeFromTop(28);
+    juce::ColourGradient hdrGrad(
+        accent.withAlpha(0.3f),
+        hdr.getTopLeft(),
+        accent.withAlpha(0.08f),
+        hdr.getBottomLeft(), false);
+    g.setGradientFill(hdrGrad);
+    g.fillRoundedRectangle(hdr.reduced(2, 0).withTrimmedBottom(8), 8.0f);
+    g.fillRect(hdr.withTrimmedTop(20));  // extend below rounded top
 
-    // subtle border
-    g.setColour (juce::Colour (0xFF2A2A3A));
-    g.drawRoundedRectangle (b.reduced (0.5f), 8.0f, 0.5f);
+    // Accent glow line under header
+    g.setColour(accent.withAlpha(0.5f));
+    g.drawLine(b.getX() + 12, hdr.getBottom(), b.getRight() - 12, hdr.getBottom(), 1.0f);
+
+    // Title text
+    g.setColour(accent.withAlpha(0.9f));
+    g.setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::bold));
+    g.drawText(title, hdr.getX() + 12, hdr.getY(), hdr.getWidth() - 24, hdr.getHeight(),
+               juce::Justification::centredLeft);
+
+    // Subtle card border
+    g.setColour(juce::Colour(ColourID::kBorder).withAlpha(0.4f));
+    g.drawRoundedRectangle(b.reduced(0.5f), 8.0f, 0.5f);
 }
 
 //==============================================================================
@@ -156,7 +211,7 @@ void AnalogSynthAudioProcessorEditor::WaveformPreview::paint (juce::Graphics& g)
             p.lineTo (x, mid - val * amp);
         }
     }
-    g.setColour (juce::Colour (0xFF00E5B0).withAlpha (0.7f));
+    g.setColour (juce::Colour(ColourID::kSignalPath).withAlpha (0.7f));
     g.strokePath (p, juce::PathStrokeType (1.0f));
 }
 
@@ -268,12 +323,74 @@ void AnalogSynthAudioProcessorEditor::FilterCurveDisplay::paint (juce::Graphics&
         p.lineTo (x, juce::jlimit(b.getY(), b.getBottom(), y));
     }
 
-    g.setColour (juce::Colour(0xFFFF7744).withAlpha(0.8f));
+    g.setColour (juce::Colour(ColourID::kSignalPath).withAlpha(0.8f));
     g.strokePath (p, juce::PathStrokeType(1.5f));
 
     // cutoff marker
-    g.setColour (juce::Colour(0xFFFF7744).withAlpha(0.25f));
+    g.setColour (juce::Colour(ColourID::kSignalPath).withAlpha(0.25f));
     g.drawLine (cx, b.getY() + 4, cx, b.getBottom() - 4, 0.5f);
+}
+
+//==============================================================================
+// SignalFlowDiagram — visual routing between modules
+//   OSC → MIX → FLT → AMP → FX
+//==============================================================================
+void AnalogSynthAudioProcessorEditor::SignalFlowDiagram::paint (juce::Graphics& g)
+{
+    auto b = getLocalBounds().toFloat().reduced(4, 2);
+    auto w = b.getWidth();
+    auto h = b.getHeight();
+    auto midY = b.getCentreY();
+
+    // Background track
+    g.setColour(juce::Colour(ColourID::kSurface));
+    g.fillRoundedRectangle(b, 6.0f);
+
+    // Module boxes — evenly spaced
+    const char* labels[] = {"OSC", "MIX", "FLT", "AMP", "FX"};
+    const juce::Colour colours[] = {
+        juce::Colour(ColourID::kSignalPath),
+        juce::Colour(ColourID::kSignalPath).withAlpha(0.7f),
+        juce::Colour(ColourID::kSignalPath),
+        juce::Colour(ColourID::kModulation),
+        juce::Colour(ColourID::kEffects)
+    };
+    constexpr int numBlocks = 5;
+    float blockW = 52;
+    float totalW = numBlocks * blockW + (numBlocks - 1) * 18;
+    float startX = b.getX() + (w - totalW) / 2.0f;
+
+    for (int i = 0; i < numBlocks; ++i)
+    {
+        float bx = startX + i * (blockW + 18);
+        auto block = juce::Rectangle<float>(bx, midY - 14, blockW, 28);
+
+        // Block background
+        g.setColour(colours[i].withAlpha(0.18f));
+        g.fillRoundedRectangle(block, 5.0f);
+        g.setColour(colours[i].withAlpha(0.5f));
+        g.drawRoundedRectangle(block, 5.0f, 1.0f);
+
+        // Label
+        g.setColour(colours[i].withAlpha(0.9f));
+        g.setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 10.0f, juce::Font::bold));
+        g.drawText(labels[i], block, juce::Justification::centred);
+
+        // Arrow connector (except last)
+        if (i < numBlocks - 1)
+        {
+            float arrowStart = block.getRight();
+            float arrowEnd   = arrowStart + 18;
+            g.setColour(colours[i].withAlpha(0.35f));
+            g.drawLine(arrowStart + 2, midY, arrowEnd - 2, midY, 1.0f);
+            // Arrowhead
+            juce::Path arrow;
+            arrow.addTriangle(arrowEnd - 2, midY - 4,
+                              arrowEnd - 2, midY + 4,
+                              arrowEnd,     midY);
+            g.fillPath(arrow);
+        }
+    }
 }
 
 //==============================================================================
@@ -344,6 +461,9 @@ void AnalogSynthAudioProcessorEditor::buildUI()
 {
     laf = std::make_unique<SynthLookAndFeel>();
 
+    // Signal flow diagram (top of content)
+    addAndMakeVisible(signalFlow);
+
     // panels
     addAndMakeVisible (oscPanel);
     addAndMakeVisible (filtPanel);
@@ -401,8 +521,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc2SyncToggle.setClickingTogglesState(true);
     osc2SyncToggle.setLookAndFeel(laf.get());
     osc2SyncToggle.setButtonText("SYNC");
-    osc2SyncToggle.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF00E5B0));
-    osc2SyncToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF00E5B0));
+    osc2SyncToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(ColourID::kSignalPath));
     osc2SyncToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::osc2Sync, osc2SyncToggle);
 
     {
@@ -429,8 +548,7 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     osc3FMToggle.setClickingTogglesState(true);
     osc3FMToggle.setLookAndFeel(laf.get());
     osc3FMToggle.setButtonText("FM");
-    osc3FMToggle.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF00E5B0));
-    osc3FMToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF00E5B0));
+    osc3FMToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(ColourID::kSignalPath));
     osc3FMToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::osc3FM, osc3FMToggle);
 
     {
@@ -472,11 +590,11 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     }
 
     // Amp Env
-    ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get(), juce::Colour(0xFF88BBFF));
-    ampD.setup  ("ampDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "DEC"," s", this, laf.get(), juce::Colour(0xFF88BBFF));
-    ampS.setup  ("ampSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.7f,       "SUS","",   this, laf.get(), juce::Colour(0xFF88BBFF));
-    ampR.setup  ("ampRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "REL"," s", this, laf.get(), juce::Colour(0xFF88BBFF));
-    ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get(), juce::Colour(0xFF88BBFF));
+    ampA.setup  ("ampAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,  "ATT"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
+    ampD.setup  ("ampDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "DEC"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
+    ampS.setup  ("ampSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.7f,       "SUS","",   this, laf.get(), juce::Colour(ColourID::kModulation));
+    ampR.setup  ("ampRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f,   "REL"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
+    ampVel.setup("ampVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.5f,       "VEL","",   this, laf.get(), juce::Colour(ColourID::kModulation));
     addAndMakeVisible (ampCurve);
 
     // Wire curve to knob changes (preserve APVTS attachment callback)
@@ -497,40 +615,46 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     wireCurveKnob(ampA, ampD, ampS, ampR, ampCurve);
 
     // Filt Env
-    fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get(), juce::Colour(0xFFBB88FF));
-    fenvD.setup  ("filtDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC"," s", this, laf.get(), juce::Colour(0xFFBB88FF));
-    fenvS.setup  ("filtSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "SUS","",   this, laf.get(), juce::Colour(0xFFBB88FF));
-    fenvR.setup  ("filtRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL"," s", this, laf.get(), juce::Colour(0xFFBB88FF));
-    fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get(), juce::Colour(0xFFBB88FF));
-    fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get(), juce::Colour(0xFFBB88FF));
+    fenvA.setup  ("filtAttack",   apvts, 0.001f, 10.0f, 0.001f, 0.01f,"ATT"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
+    fenvD.setup  ("filtDecay",    apvts, 0.001f, 10.0f, 0.001f, 0.3f, "DEC"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
+    fenvS.setup  ("filtSustain",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "SUS","",   this, laf.get(), juce::Colour(ColourID::kModulation));
+    fenvR.setup  ("filtRelease",  apvts, 0.001f, 10.0f, 0.001f, 0.3f, "REL"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
+    fenvAmt.setup("filtAmount",   apvts, -1.0f, 1.0f, 0.01f, 0.5f,    "AMT","",   this, laf.get(), juce::Colour(ColourID::kModulation));
+    fenvVel.setup("filtVelSens",  apvts, 0.0f, 1.0f, 0.01f, 0.0f,     "VEL","",   this, laf.get(), juce::Colour(ColourID::kModulation));
     addAndMakeVisible (fenvCurve);
 
     wireCurveKnob(fenvA, fenvD, fenvS, fenvR, fenvCurve);
 
     // LFO 1
     setCombo (lfo1Wave, "lfo1Wave", apvts, lfo1WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 0, this, laf.get());
-    lfo1Rate.setup ("lfo1Rate",   apvts, 0.01f, 20.0f, 0.01f, 1.0f,  "RATE"," Hz",this, laf.get(), juce::Colour(0xFFFFAA55));
-    lfo1Amt.setup  ("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(0xFFFFAA55));
-    lfo1Del.setup  ("lfo1Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(0xFFFFAA55));
-    lfo1Fade.setup ("lfo1Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo1Rate.setup ("lfo1Rate",   apvts, 0.01f, 20.0f, 0.01f, 1.0f,  "RATE"," Hz",this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo1Amt.setup  ("lfo1Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo1Del.setup  ("lfo1Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo1Fade.setup ("lfo1Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
 
     // LFO 2
     setCombo (lfo2Wave, "lfo2Wave", apvts, lfo2WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 1, this, laf.get());
-    lfo2Rate.setup ("lfo2Rate",   apvts, 0.01f, 20.0f, 0.01f, 5.0f,  "RATE"," Hz",this, laf.get(), juce::Colour(0xFFFFAA55));
-    lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(0xFFFFAA55));
-    lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(0xFFFFAA55));
-    lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(0xFFFFAA55));
+    lfo2Rate.setup ("lfo2Rate",   apvts, 0.01f, 20.0f, 0.01f, 5.0f,  "RATE"," Hz",this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo2Amt.setup  ("lfo2Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo2Del.setup  ("lfo2Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo2Fade.setup ("lfo2Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
+
+    // LFO 3
+    setCombo (lfo3Wave, "lfo3Wave", apvts, lfo3WaveA, {"Sine","Triangle","Saw","Square","S&H"}, 0, this, laf.get());
+    lfo3Rate.setup ("lfo3Rate",   apvts, 0.01f, 20.0f, 0.01f, 0.5f,  "RATE"," Hz",this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo3Amt.setup  ("lfo3Amount", apvts, 0.0f, 1.0f, 0.01f, 0.0f,   "AMT", "",   this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo3Del.setup  ("lfo3Delay",  apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "DEL"," s",  this, laf.get(), juce::Colour(ColourID::kModulation));
+    lfo3Fade.setup ("lfo3Fade",   apvts, 0.0f, 5.0f, 0.01f, 0.0f,   "FADE"," s", this, laf.get(), juce::Colour(ColourID::kModulation));
 
     // Arpeggiator
     addAndMakeVisible(arpToggle);
     arpToggle.setClickingTogglesState(true);
     arpToggle.setLookAndFeel(laf.get());
-    arpToggle.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF26A69A));
-    arpToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF26A69A));
+    arpToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colour(ColourID::kArp));
     arpToggle.onClick = [this]() {
         bool on = arpToggle.getToggleState();
         arpToggle.setButtonText(on ? "OFF" : "ON");
-        arpToggle.setColour(juce::TextButton::buttonColourId, on ? juce::Colour(0xFF26A69A) : juce::Colour(0xFF3A3A4A));
+        arpToggle.setColour(juce::TextButton::buttonColourId, on ? juce::Colour(ColourID::kArp) : juce::Colour(ColourID::kPanel));
     };
     arpToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::arpEnabled, arpToggle);
     setCombo(arpMode, "arpMode", apvts, arpModeA, {"Up", "Down", "Up-Down", "Random", "Order Played", "Custom"}, 0, this, laf.get());
@@ -558,11 +682,11 @@ void AnalogSynthAudioProcessorEditor::buildUI()
         slider.setValue(0.0);
         slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
         slider.setLookAndFeel(laf.get());
-        slider.setColour(juce::Slider::trackColourId, juce::Colour(0xFF00897B));
+        slider.setColour(juce::Slider::trackColourId, juce::Colour(ColourID::kArp));
         slider.setColour(juce::Slider::backgroundColourId, juce::Colour(0xFF1A1A2E));
 
         toggle.setLookAndFeel(laf.get());
-        toggle.setColour(juce::ToggleButton::tickColourId, juce::Colour(0xFF26A69A));
+        toggle.setColour(juce::ToggleButton::tickColourId, juce::Colour(ColourID::kArp));
         toggle.setColour(juce::ToggleButton::tickDisabledColourId, juce::Colour(0xFF333344));
 
         label.setText(juce::String(i + 1), juce::dontSendNotification);
@@ -601,15 +725,15 @@ void AnalogSynthAudioProcessorEditor::buildUI()
         k.label.setText(txt, juce::dontSendNotification);
         k.label.setJustificationType(juce::Justification::centred);
         k.label.setFont(juce::FontOptions(9.0f));
-        k.label.setColour(juce::Label::textColourId, juce::Colour(0xFF777788));
+        k.label.setColour(juce::Label::textColourId, juce::Colour(ColourID::kTextMuted));
     };
     // Real FX controls — each with toggle + knobs wired to APVTS
     auto setupFXToggle = [&](juce::TextButton& btn, const char* paramID) {
         addAndMakeVisible(btn);
         btn.setClickingTogglesState(true);
         btn.setLookAndFeel(laf.get());
-        btn.setColour(juce::TextButton::buttonColourId, juce::Colour(0xFF7C4DFF));
-        btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF7C4DFF));
+        btn.setColour(juce::TextButton::buttonColourId, juce::Colour(ColourID::kEffects));
+        btn.setColour(juce::TextButton::buttonOnColourId, juce::Colour(ColourID::kEffects));
         btn.setButtonText("OFF");
         btn.onClick = [&btn]() {
             btn.setButtonText(btn.getToggleState() ? "ON" : "OFF");
@@ -617,43 +741,43 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     };
     setupFXToggle(chToggle, "chorusOn");
     chToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::chorusOn, chToggle);
-    chRate.setup("chorusRate", apvts, 0.1f, 5.0f, 0.01f, 1.0f, "RATE", "Hz", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    chDepth.setup("chorusDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    chMix.setup("chorusMix", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "MIX", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    chRate.setup("chorusRate", apvts, 0.1f, 5.0f, 0.01f, 1.0f, "RATE", "Hz", this, laf.get(), juce::Colour(ColourID::kEffects));
+    chDepth.setup("chorusDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    chMix.setup("chorusMix", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "MIX", "", this, laf.get(), juce::Colour(ColourID::kEffects));
 
     setupFXToggle(flToggle, "flangerOn");
     flToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::flangerOn, flToggle);
-    flRate.setup("flangerRate", apvts, 0.05f, 5.0f, 0.01f, 0.5f, "RATE", "Hz", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    flDepth.setup("flangerDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    flFb.setup("flangerFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "FB", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    flMix.setup("flangerMix", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "MIX", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    flRate.setup("flangerRate", apvts, 0.05f, 5.0f, 0.01f, 0.5f, "RATE", "Hz", this, laf.get(), juce::Colour(ColourID::kEffects));
+    flDepth.setup("flangerDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    flFb.setup("flangerFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "FB", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    flMix.setup("flangerMix", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "MIX", "", this, laf.get(), juce::Colour(ColourID::kEffects));
 
     setupFXToggle(phToggle, "phaserOn");
     phToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::phaserOn, phToggle);
-    phRate.setup("phaserRate", apvts, 0.05f, 5.0f, 0.01f, 0.3f, "RATE", "Hz", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    phDepth.setup("phaserDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    phFb.setup("phaserFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "FB", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    phMix.setup("phaserMix", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "MIX", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    phRate.setup("phaserRate", apvts, 0.05f, 5.0f, 0.01f, 0.3f, "RATE", "Hz", this, laf.get(), juce::Colour(ColourID::kEffects));
+    phDepth.setup("phaserDepth", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DEPTH", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    phFb.setup("phaserFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "FB", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    phMix.setup("phaserMix", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "MIX", "", this, laf.get(), juce::Colour(ColourID::kEffects));
 
     setupFXToggle(dlyToggle, "delayOn");
     dlyToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::delayOn, dlyToggle);
-    dlyTimeL.setup("delayTimeL", apvts, 0.02f, 2.0f, 0.01f, 0.5f, "TIME L", "s", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    dlyTimeR.setup("delayTimeR", apvts, 0.02f, 2.0f, 0.01f, 0.375f, "TIME R", "s", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    dlyFb2.setup("delayFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.4f, "FB", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    dlyWet2.setup("delayWet", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "WET", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    dlyTimeL.setup("delayTimeL", apvts, 0.02f, 2.0f, 0.01f, 0.5f, "TIME L", "s", this, laf.get(), juce::Colour(ColourID::kEffects));
+    dlyTimeR.setup("delayTimeR", apvts, 0.02f, 2.0f, 0.01f, 0.375f, "TIME R", "s", this, laf.get(), juce::Colour(ColourID::kEffects));
+    dlyFb2.setup("delayFeedback", apvts, 0.0f, 1.0f, 0.01f, 0.4f, "FB", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    dlyWet2.setup("delayWet", apvts, 0.0f, 1.0f, 0.01f, 0.3f, "WET", "", this, laf.get(), juce::Colour(ColourID::kEffects));
 
     setupFXToggle(revToggle, "reverbOn");
     revToggleA = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts, ParameterIDs::reverbOn, revToggle);
-    revSize2.setup("reverbSize", apvts, 0.1f, 1.0f, 0.01f, 0.5f, "SIZE", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    revDamp.setup("reverbDamp", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DAMP", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
-    revWet2.setup("reverbWet", apvts, 0.0f, 1.0f, 0.01f, 0.2f, "WET", "", this, laf.get(), juce::Colour(0xFF7C4DFF));
+    revSize2.setup("reverbSize", apvts, 0.1f, 1.0f, 0.01f, 0.5f, "SIZE", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    revDamp.setup("reverbDamp", apvts, 0.0f, 1.0f, 0.01f, 0.5f, "DAMP", "", this, laf.get(), juce::Colour(ColourID::kEffects));
+    revWet2.setup("reverbWet", apvts, 0.0f, 1.0f, 0.01f, 0.2f, "WET", "", this, laf.get(), juce::Colour(ColourID::kEffects));
 
     // FX sub-labels
     auto setupFXLabel = [&](juce::Label& lbl, const juce::String& txt) {
         addAndMakeVisible(lbl);
         lbl.setText(txt, juce::dontSendNotification);
         lbl.setFont(juce::FontOptions(8.0f, juce::Font::bold));
-        lbl.setColour(juce::Label::textColourId, juce::Colour(0xFF7C4DFF));
+        lbl.setColour(juce::Label::textColourId, juce::Colour(ColourID::kEffects));
         lbl.setJustificationType(juce::Justification::centred);
     };
     setupFXLabel(chLabel, "CHORUS");  setupFXLabel(flLabel, "FLANGER");
@@ -661,8 +785,8 @@ void AnalogSynthAudioProcessorEditor::buildUI()
     setupFXLabel(revLabel2, "REVERB");
 
     // Macro placeholder knobs (for future use)
-    setupPh(macro1, "M1", "", 0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro2, "M2", "", 0.0f, juce::Colour(0xFF42A5F5));
-    setupPh(macro3, "M3", "", 0.0f, juce::Colour(0xFF42A5F5));  setupPh(macro4, "M4", "", 0.0f, juce::Colour(0xFF42A5F5));
+    setupPh(macro1, "M1", "", 0.0f, juce::Colour(ColourID::kModulation));  setupPh(macro2, "M2", "", 0.0f, juce::Colour(ColourID::kModulation));
+    setupPh(macro3, "M3", "", 0.0f, juce::Colour(ColourID::kModulation));  setupPh(macro4, "M4", "", 0.0f, juce::Colour(ColourID::kModulation));
 
     // Mod matrix label
     addAndMakeVisible (modLabel);
@@ -687,16 +811,16 @@ void AnalogSynthAudioProcessorEditor::buildUI()
 //==============================================================================
 void AnalogSynthAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colour (0xFF0D0D14));
+    g.fillAll (juce::Colour(ColourID::kBg));
 
     // top bar
     auto hdr = getLocalBounds().removeFromTop (48);
-    g.setColour (juce::Colour (0xFF12121C));
+    g.setColour (juce::Colour(ColourID::kSurface));
     g.fillRect (hdr);
-    g.setColour (juce::Colour (0xFF1E1E2E));
+    g.setColour (juce::Colour(ColourID::kBorder).withAlpha(0.6f));
     g.drawLine (0, hdr.getBottom(), getWidth(), hdr.getBottom(), 1.0f);
 
-    g.setColour (juce::Colour (0xFF00E5B0).withAlpha (0.9f));
+    g.setColour (juce::Colour(ColourID::kSignalPath).withAlpha (0.9f));
     g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
     g.drawText ("ANALOG SYNTH", hdr.removeFromLeft (180).reduced (14, 0),
                 juce::Justification::centredLeft);
@@ -714,11 +838,15 @@ void AnalogSynthAudioProcessorEditor::resized()
 {
     if (!built) { buildUI(); built = true; }
 
-    viewport.setBounds(getLocalBounds().withTrimmedTop(48));  // leave room for title bar
-    contentComp.setSize(1050, 1500);
-    
+    viewport.setBounds(getLocalBounds().withTrimmedTop(48));
+    contentComp.setSize(1050, 1700);  // taller for 48px knobs + LFO3 + signal flow
+
     auto b    = contentComp.getLocalBounds().reduced (10);
     auto hdr  = b.removeFromTop (48);
+
+    // Signal flow diagram
+    signalFlow.setBounds(b.removeFromTop(42).reduced(0, 2));
+    b.removeFromTop(6);
 
     // global knobs (top-right)
 
@@ -880,11 +1008,11 @@ void AnalogSynthAudioProcessorEditor::resized()
 
     R.removeFromTop (4);
 
-    // ----- LFOs -----
-    auto lfoB = R.removeFromTop (130);
+    // ----- LFOs (3 columns) -----
+    auto lfoB = R.removeFromTop (140);
     lfoPanel.setBounds (lfoB);
     auto li = lfoB.reduced (8, 30);
-    auto lHalfW = li.getWidth() / 2 - 2;
+    auto lThirdW = (li.getWidth() - 2 * 4) / 3;
 
     auto layLFO = [&](juce::ComboBox& wv, KnobGroup& rt, KnobGroup& am, KnobGroup& dl, KnobGroup& fd,
                       juce::Rectangle<int> c)
@@ -898,9 +1026,11 @@ void AnalogSynthAudioProcessorEditor::resized()
         fd.slider.setBounds (kr.reduced (1));
     };
 
-    layLFO (lfo1Wave, lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade, li.removeFromLeft (lHalfW));
+    layLFO (lfo1Wave, lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade, li.removeFromLeft (lThirdW));
     li.removeFromLeft (4);
-    layLFO (lfo2Wave, lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade, li);
+    layLFO (lfo2Wave, lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade, li.removeFromLeft (lThirdW));
+    li.removeFromLeft (4);
+    layLFO (lfo3Wave, lfo3Rate, lfo3Amt, lfo3Del, lfo3Fade, li);
 
 
     // ----- ARPEGGIATOR -----

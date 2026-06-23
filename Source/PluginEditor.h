@@ -6,21 +6,52 @@
 class AnalogSynthAudioProcessor;
 
 /*
- * Codex/Serum-inspired premium GUI
- *   - Dark uniform background (#0D0D14)
- *   - Rounded panel cards with accent-colored headers
- *   - Animated ADSR envelope curve displays
- *   - Filter response curve visualization
- *   - Mini waveform previews per oscillator
- *   - FX and Macro sections
- *   - Rack-system modular partitioning
+ *  ╔═══════════════════════════════════════════╗
+ *  ║  AnalogueSynth  —  Premium Dark UI        ║
+ *  ║  Design System v2.0                       ║
+ *  ╠═══════════════════════════════════════════╣
+ *  ║  Signal Path:  Cyan     #00E5B0           ║
+ *  ║  Modulation:   Amber    #FFAA55           ║
+ *  ║  Effects:      Purple   #7C4DFF           ║
+ *  ║  Background:   #080810                    ║
+ *  ║  Surface:      #12121E                    ║
+ *  ║  Panel:        #1A1A2E                    ║
+ *  ╚═══════════════════════════════════════════╝
+ *
+ *  Architecture:
+ *    • Left → Right signal flow philosophy
+ *    • Modular rack-style panels with gradient headers
+ *    • Animated signal routing diagram
+ *    • Collapsible step sequencer (Custom arp mode)
+ *    • Expansion-ready: empty slots for future modules
  */
+
+//==============================================================================
+// Design tokens
+namespace ColourID
+{
+    // Functional
+    inline constexpr auto kSignalPath  = 0xFF00E5B0;  // cyan — osc, filter, amp
+    inline constexpr auto kModulation  = 0xFFFFAA55;  // amber — lfo, env, mod matrix
+    inline constexpr auto kEffects     = 0xFF7C4DFF;  // purple — fx
+    inline constexpr auto kArp         = 0xFF26A69A;  // teal — arp/seq (secondary signal)
+
+    // Neutrals
+    inline constexpr auto kBg          = 0xFF080810;  // deepest background
+    inline constexpr auto kSurface     = 0xFF12121E;  // panel card base
+    inline constexpr auto kPanel       = 0xFF1A1A2E;  // elevated surface
+    inline constexpr auto kBorder      = 0xFF2A2A3E;  // subtle borders
+    inline constexpr auto kTextPrimary = 0xFFCCCCDD;
+    inline constexpr auto kTextMuted   = 0xFF66667A;
+    inline constexpr auto kTextDim     = 0xFF44445A;
+}
 
 //==============================================================================
 // Forward declarations
 struct KnobGroup;
 class SectionPanel;
 class WaveformPreview;
+class SignalFlowDiagram;
 
 //==============================================================================
 class AnalogSynthAudioProcessorEditor : public juce::AudioProcessorEditor
@@ -50,10 +81,10 @@ private:
                     float min, float max, float step, float def,
                     const juce::String& txt, const juce::String& suffix,
                     juce::Component* parent, juce::LookAndFeel* lf,
-                    juce::Colour accent = juce::Colour(0xFF00E5B0));
+                    juce::Colour accent = juce::Colour(ColourID::kSignalPath));
     };
 
-    // --- Rounded panel card with accent header ---
+    // --- Rounded panel card with gradient header ---
     class SectionPanel : public juce::Component
     {
     public:
@@ -99,6 +130,13 @@ private:
         float resonance    = 0.0f;
     };
 
+    // --- Signal flow routing diagram ---
+    class SignalFlowDiagram : public juce::Component
+    {
+    public:
+        void paint (juce::Graphics&) override;
+    };
+
     // -----------------------------------------------------------------
     // State
     // -----------------------------------------------------------------
@@ -106,7 +144,7 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     bool built = false;
     void buildUI();
-    
+
     // Scroll support — content is taller than window, user scrolls vertically
     juce::Viewport viewport;
     juce::Component contentComp;
@@ -120,6 +158,11 @@ private:
     juce::ComboBox presetBox;
     void loadPreset(int idx);
     void initPresets();
+
+    // -----------------------------------------------------------------
+    // Signal flow diagram
+    // -----------------------------------------------------------------
+    SignalFlowDiagram signalFlow;
 
     // -----------------------------------------------------------------
     // Oscillators × 3
@@ -136,8 +179,8 @@ private:
         osc1WTA, osc2WTA, osc3WTA;
 
     WaveformPreview wf1, wf2, wf3;
-    SectionPanel oscPanel {"OSCILLATORS", juce::Colour(0xFF00E5B0)};
-    
+    SectionPanel oscPanel {"OSCILLATORS", juce::Colour(ColourID::kSignalPath)};
+
     // Sync + FM toggles
     juce::TextButton osc2SyncToggle, osc3FMToggle;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> osc2SyncToggleA, osc3FMToggleA;
@@ -149,25 +192,26 @@ private:
     juce::ComboBox filtType;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> filtTypeA;
     FilterCurveDisplay filterCurve;
-    SectionPanel filtPanel {"FILTER", juce::Colour(0xFFFF7744)};
+    SectionPanel filtPanel {"FILTER", juce::Colour(ColourID::kSignalPath)};
 
     // -----------------------------------------------------------------
     // Envelopes
     // -----------------------------------------------------------------
     KnobGroup ampA, ampD, ampS, ampR, ampVel;
     KnobGroup fenvA, fenvD, fenvS, fenvR, fenvAmt, fenvVel;
-    SectionPanel ampPanel  {"AMP ENVELOPE",    juce::Colour(0xFF88BBFF)};
-    SectionPanel fenvPanel {"FILTER ENVELOPE", juce::Colour(0xFFBB88FF)};
+    SectionPanel ampPanel  {"AMP ENVELOPE",    juce::Colour(ColourID::kModulation)};
+    SectionPanel fenvPanel {"FILTER ENVELOPE", juce::Colour(ColourID::kModulation)};
     EnvDisplay ampCurve, fenvCurve;
 
     // -----------------------------------------------------------------
-    // LFOs
+    // LFOs (3)
     // -----------------------------------------------------------------
     KnobGroup lfo1Rate, lfo1Amt, lfo1Del, lfo1Fade;
     KnobGroup lfo2Rate, lfo2Amt, lfo2Del, lfo2Fade;
-    juce::ComboBox lfo1Wave, lfo2Wave;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> lfo1WaveA, lfo2WaveA;
-    SectionPanel lfoPanel {"LFOs", juce::Colour(0xFFFFAA55)};
+    KnobGroup lfo3Rate, lfo3Amt, lfo3Del, lfo3Fade;
+    juce::ComboBox lfo1Wave, lfo2Wave, lfo3Wave;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> lfo1WaveA, lfo2WaveA, lfo3WaveA;
+    SectionPanel lfoPanel {"LFOs", juce::Colour(ColourID::kModulation)};
 
     // -----------------------------------------------------------------
     // Arpeggiator
@@ -177,10 +221,10 @@ private:
     juce::TextButton arpToggle;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> arpModeA, arpRateA;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> arpToggleA;
-    SectionPanel arpPanel {"ARPEGGIATOR", juce::Colour(0xFF26A69A)};
-    
+    SectionPanel arpPanel {"ARPEGGIATOR", juce::Colour(ColourID::kArp)};
+
     // Step sequencer grid (visible in Custom mode)
-    SectionPanel stepPanel {"STEP SEQUENCER", juce::Colour(0xFF00897B)};
+    SectionPanel stepPanel {"STEP SEQUENCER", juce::Colour(ColourID::kArp)};
     juce::Slider arpStepSliders[16];
     juce::ToggleButton arpStepToggles[16];
     juce::Label arpStepLabels[16];
@@ -190,10 +234,8 @@ private:
     // -----------------------------------------------------------------
     // FX
     // -----------------------------------------------------------------
-    KnobGroup dlyTime, dlyFb, dlyWet, revSize, revWet, revMix;
-    SectionPanel fxPanel {"FX", juce::Colour(0xFF7C4DFF)};
-    
-    // Real FX controls (replacing placeholders)
+    SectionPanel fxPanel {"EFFECTS", juce::Colour(ColourID::kEffects)};
+
     // Chorus
     KnobGroup chRate, chDepth, chMix;
     juce::TextButton chToggle;
@@ -220,23 +262,23 @@ private:
     // Macro
     // -----------------------------------------------------------------
     KnobGroup macro1, macro2, macro3, macro4;
-    SectionPanel macroPanel {"MACRO", juce::Colour(0xFF42A5F5)};
+    SectionPanel macroPanel {"MACRO", juce::Colour(ColourID::kModulation)};
 
     // -----------------------------------------------------------------
     // Mod Matrix
     // -----------------------------------------------------------------
-    SectionPanel modPanel {"MOD MATRIX", juce::Colour(0xFF8888AA)};
+    SectionPanel modPanel {"MOD MATRIX", juce::Colour(ColourID::kModulation)};
     juce::Label modLabel;
 
     // -----------------------------------------------------------------
     // Constants
     // -----------------------------------------------------------------
-    static constexpr int kKnob    = 42;
+    static constexpr int kKnob    = 48;   // increased from 42
     static constexpr int kLabelH  = 14;
     static constexpr int kComboH  = 24;
-    static constexpr int kGap     = 8;
-    static constexpr int kPanelPad = 32;
-    static constexpr int kInset   = 4;
+    static constexpr int kGap     = 10;
+    static constexpr int kPanelPad = 36;  // increased from 32 for gradient headers
+    static constexpr int kInset   = 6;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogSynthAudioProcessorEditor)
 };
